@@ -172,6 +172,7 @@ export function placeholderRooms(siteId: string, floors: Floor[]): RoomWithRelat
       occupied_spaces: sample.occupied_spaces,
       sort_order: index + 1,
       is_active: true,
+      room_type: null,
       created_at: now,
       updated_at: now,
       floors: {

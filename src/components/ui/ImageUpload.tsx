@@ -6,13 +6,23 @@ import { validateImageFile } from '@/services/storageService'
 
 interface ImageUploadProps {
   label: string
+  hint?: string
   value?: string | null
   uploading?: boolean
+  fit?: 'cover' | 'contain'
   onSelect: (file: File) => void
   onRemove?: () => void
 }
 
-export function ImageUpload({ label, value, uploading, onSelect, onRemove }: ImageUploadProps) {
+export function ImageUpload({
+  label,
+  hint,
+  value,
+  uploading,
+  fit = 'cover',
+  onSelect,
+  onRemove,
+}: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [localError, setLocalError] = useState<string | null>(null)
 
@@ -34,7 +44,11 @@ export function ImageUpload({ label, value, uploading, onSelect, onRemove }: Ima
         <img
           src={value}
           alt=""
-          className="h-40 w-full rounded-2xl object-cover"
+          className={
+            fit === 'contain'
+              ? 'mx-auto h-40 w-40 rounded-2xl border border-line bg-white object-contain p-4'
+              : 'h-40 w-full rounded-2xl object-cover'
+          }
         />
       ) : (
         <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-line bg-paper text-muted">
@@ -67,7 +81,7 @@ export function ImageUpload({ label, value, uploading, onSelect, onRemove }: Ima
           event.target.value = ''
         }}
       />
-      <p className="text-xs text-muted">JPG, PNG, or WebP. Maximum 5 MB.</p>
+      <p className="text-xs text-muted">{hint ?? 'JPG, PNG, or WebP. Maximum 5 MB.'}</p>
       {localError ? <p className="text-sm text-red-700">{localError}</p> : null}
     </div>
   )

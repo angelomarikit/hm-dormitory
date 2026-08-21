@@ -112,6 +112,8 @@ export default function SettingsPage() {
         <SettingsGroup title="Images">
           <ImageUpload
             label="Logo"
+            fit="contain"
+            hint="Square PNG or WebP, 512 × 512 px, transparent background. The header shows it at 48 × 48. Maximum 5 MB."
             value={form.logo_url}
             uploading={uploading === 'logo_url'}
             onSelect={(file) => void upload('logo', file, 'logo_url')}

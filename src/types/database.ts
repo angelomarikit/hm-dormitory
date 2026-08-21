@@ -102,6 +102,7 @@ export interface Room {
   occupied_spaces: number
   sort_order: number
   is_active: boolean
+  room_type: 'big' | 'small' | null
   created_at: string
   updated_at: string
 }
@@ -212,6 +213,41 @@ export type HouseRuleInput = {
   description: string
   sort_order?: number
   is_active?: boolean
+}
+
+export interface Tenant {
+  id: string
+  site_id: string
+  room_id: string
+  full_name: string
+  phone: string | null
+  notes: string | null
+  started_on: string
+  left_on: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface TenantWithRoom extends Tenant {
+  rooms: {
+    id: string
+    room_number: string
+    room_name: string | null
+    room_type: 'big' | 'small' | null
+    capacity: number
+    occupied_spaces: number
+    floor_id: string
+    floors: Pick<Floor, 'id' | 'name' | 'floor_number'> | null
+  } | null
+}
+
+export type TenantInput = {
+  room_id: string
+  full_name: string
+  phone?: string | null
+  notes?: string | null
+  started_on: string
 }
 
 export interface FloorAvailability {

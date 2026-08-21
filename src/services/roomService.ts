@@ -90,6 +90,25 @@ export async function updateRoom(
   return throwIfError(data as Room | null, error, 'Unable to update room.')
 }
 
+export async function updateRoomDetails(
+  siteId: string,
+  id: string,
+  input: { description?: string | null; room_name?: string | null },
+): Promise<Room> {
+  const { data, error } = await supabase
+    .from('rooms')
+    .update({
+      description: input.description?.trim() || null,
+      room_name: input.room_name?.trim() || null,
+    })
+    .eq('id', id)
+    .eq('site_id', siteId)
+    .select('*')
+    .single()
+
+  return throwIfError(data as Room | null, error, 'Unable to update room.')
+}
+
 export async function updateRoomOccupancy(
   siteId: string,
   id: string,

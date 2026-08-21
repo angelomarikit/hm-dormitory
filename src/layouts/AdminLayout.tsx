@@ -10,6 +10,7 @@ import {
   ScrollText,
   Settings,
   Sparkles,
+  Users,
   Wallet,
   X,
 } from 'lucide-react'
@@ -20,6 +21,7 @@ import { KeepAliveOutlet } from '@/components/KeepAliveOutlet'
 
 const navItems = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/admin/tenants', label: 'Tenants', icon: Users },
   { to: '/admin/announcements', label: 'Announcements', icon: Bell },
   { to: '/admin/rooms', label: 'Rooms', icon: Building2 },
   { to: '/admin/amenities', label: 'Amenities', icon: Sparkles },

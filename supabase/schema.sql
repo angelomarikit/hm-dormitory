@@ -813,3 +813,6 @@ on conflict (site_id, floor_number) do nothing;
 insert into public.rates (site_id)
 select id from public.sites where slug = 'hm-dormitory'
 on conflict (site_id) do nothing;
+
+-- Tenants, occupancy-from-assignments, and the 30 standard rooms:
+-- run supabase/migrations/002_tenants_and_standard_rooms.sql after this file.

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
+import { SiteLogo } from '@/components/BrandMark'
 import { useSite } from '@/contexts/SiteContext'
 import { scrollToSection } from '@/utils/scroll'
 
@@ -34,23 +35,17 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-2 sm:px-6">
         <Link
           to="/"
-          className="flex min-w-0 items-center gap-3"
+          className="flex min-w-0 items-center"
+          aria-label={site?.name ?? 'Home'}
           onClick={(event) => {
             event.preventDefault()
             goTo('top')
           }}
         >
-          {site?.logo_url ? (
-            <img src={site.logo_url} alt="" className="h-9 w-9 rounded-md object-cover" />
-          ) : (
-            <span className="flex h-9 w-9 items-center justify-center rounded-md border border-gold bg-ink text-xs font-semibold tracking-widest text-gold">
-              {site?.name.slice(0, 2).toUpperCase() ?? 'HM'}
-            </span>
-          )}
-          <span className="truncate font-display text-xl tracking-wide">{site?.name ?? 'Loading'}</span>
+          <SiteLogo url={site?.logo_url} name={site?.name} />
         </Link>
 
         <nav className="hidden items-center gap-6 lg:flex" aria-label="Primary">
@@ -114,7 +109,7 @@ function useActiveSection() {
     let frame = 0
 
     function update() {
-      const offset = 96
+      const offset = 128
       let current = 'top'
 
       for (const id of watchedIds) {

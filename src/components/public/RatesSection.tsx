@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from 'react'
 import { isFilled } from '@/utils/cn'
 import { SampleLabel } from '@/components/public/SampleLabel'
 import type { Rate } from '@/types/database'
@@ -30,14 +31,49 @@ export function RatesSection({
         Rates
         <SampleLabel show={isSample} />
       </h2>
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
+      <div className="mt-6 grid items-stretch gap-4 md:grid-cols-2">
         {items.map((item) => (
-          <article key={item.label} className="rounded-xl border border-line bg-white p-5">
-            <h3 className="text-xs font-medium tracking-[0.16em] text-gold uppercase">{item.label}</h3>
-            <p className="mt-3 whitespace-pre-line text-lg leading-7">{item.value}</p>
-          </article>
+          <RateCard key={item.label} label={item.label} value={item.value} />
         ))}
       </div>
     </section>
+  )
+}
+
+function RateCard({ label, value }: { label: string; value: string }) {
+  const textRef = useRef<HTMLParagraphElement>(null)
+  const [expanded, setExpanded] = useState(false)
+  const [canToggle, setCanToggle] = useState(false)
+
+  useLayoutEffect(() => {
+    const element = textRef.current
+    if (!element || expanded) return
+    setCanToggle(element.scrollHeight > element.clientHeight + 1)
+  }, [value, expanded])
+
+  return (
+    <article className="flex h-full flex-col rounded-xl border border-line bg-white p-5">
+      <h3 className="text-xs font-medium tracking-[0.16em] text-gold uppercase">{label}</h3>
+      <p
+        ref={textRef}
+        className={[
+          'mt-3 flex-1 whitespace-pre-line text-lg leading-7',
+          expanded ? '' : 'line-clamp-5',
+        ].join(' ')}
+      >
+        {value}
+      </p>
+      {canToggle ? (
+        <button
+          type="button"
+          className="mt-4 self-start text-sm font-medium tracking-wide text-gold-dark underline decoration-gold underline-offset-4"
+          onClick={() => setExpanded((current) => !current)}
+        >
+          {expanded ? 'See less' : 'See more'}
+        </button>
+      ) : (
+        <span className="mt-4 h-5" aria-hidden="true" />
+      )}
+    </article>
   )
 }

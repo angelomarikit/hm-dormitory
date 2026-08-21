@@ -1,4 +1,5 @@
 import { Facebook, Mail, MapPin, Phone } from 'lucide-react'
+import { SiteLogo } from '@/components/BrandMark'
 import { useSite } from '@/contexts/SiteContext'
 import { isFilled } from '@/utils/cn'
 import { mergeSiteWithPlaceholders } from '@/data/placeholders'
@@ -12,11 +13,8 @@ export function Footer() {
     <footer className="mt-16 border-t border-line bg-white">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-3">
         <div>
-          <div className="flex items-center gap-3">
-            {displaySite.logo_url ? (
-              <img src={displaySite.logo_url} alt="" className="h-10 w-10 rounded-md object-cover" />
-            ) : null}
-            <p className="font-display text-2xl">{displaySite.name}</p>
+          <div className="flex items-center">
+            <SiteLogo url={displaySite.logo_url} name={displaySite.name} />
           </div>
           <span className="gold-rule mt-4" />
           {isFilled(displaySite.short_description) ? (

@@ -9,6 +9,7 @@ import AdminLoginPage from '@/pages/admin/AdminLoginPage'
 const HomePage = lazy(() => import('@/pages/public/HomePage'))
 const NotFoundPage = lazy(() => import('@/pages/public/NotFoundPage'))
 const DashboardPage = lazy(() => import('@/pages/admin/DashboardPage'))
+const TenantsPage = lazy(() => import('@/pages/admin/TenantsPage'))
 const AnnouncementsPage = lazy(() => import('@/pages/admin/AnnouncementsPage'))
 const AdminRoomsPage = lazy(() => import('@/pages/admin/RoomsPage'))
 const AmenitiesPage = lazy(() => import('@/pages/admin/AmenitiesPage'))
@@ -29,6 +30,7 @@ export default function App() {
         <Route element={<ProtectedAdminRoute />}>
           <Route element={<AdminLayout />}>
             <Route path="/admin/dashboard" element={<DashboardPage />} />
+            <Route path="/admin/tenants" element={<TenantsPage />} />
             <Route path="/admin/announcements" element={<AnnouncementsPage />} />
             <Route path="/admin/rooms" element={<AdminRoomsPage />} />
             <Route path="/admin/amenities" element={<AmenitiesPage />} />
