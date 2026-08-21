@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import { useSite } from '@/contexts/SiteContext'
 import { scrollToSection } from '@/utils/scroll'
@@ -14,11 +14,12 @@ const links = [
   { id: 'contact', label: 'Contact' },
 ]
 
+const watchedIds = ['top', 'rooms', 'amenities', 'rates', 'faq', 'house-rules', 'location', 'contact']
+
 export function Navbar() {
   const { site } = useSite()
   const [open, setOpen] = useState(false)
-  const location = useLocation()
-  const activeHash = location.hash.replace('#', '') || 'top'
+  const activeId = useActiveSection()
 
   function goTo(id: string) {
     setOpen(false)
@@ -54,7 +55,7 @@ export function Navbar() {
 
         <nav className="hidden items-center gap-6 lg:flex" aria-label="Primary">
           {links.map((link) => {
-            const active = activeHash === link.id
+            const active = activeId === link.id
             return (
               <button
                 key={link.label}
@@ -90,7 +91,10 @@ export function Navbar() {
               <button
                 key={link.label}
                 type="button"
-                className="border-b border-line px-1 py-3 text-left text-base text-ink last:border-b-0"
+                className={[
+                  'border-b border-line px-1 py-3 text-left text-base last:border-b-0',
+                  activeId === link.id ? 'text-ink' : 'text-muted',
+                ].join(' ')}
                 onClick={() => goTo(link.id)}
               >
                 {link.label}
@@ -101,4 +105,46 @@ export function Navbar() {
       ) : null}
     </header>
   )
+}
+
+function useActiveSection() {
+  const [activeId, setActiveId] = useState('top')
+
+  useEffect(() => {
+    let frame = 0
+
+    function update() {
+      const offset = 96
+      let current = 'top'
+
+      for (const id of watchedIds) {
+        const element = document.getElementById(id)
+        if (!element) continue
+        if (element.getBoundingClientRect().top - offset <= 0) {
+          current = id === 'location' ? 'contact' : id
+        }
+      }
+
+      setActiveId(current)
+    }
+
+    function onScroll() {
+      if (frame) return
+      frame = window.requestAnimationFrame(() => {
+        frame = 0
+        update()
+      })
+    }
+
+    update()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+    }
+  }, [])
+
+  return activeId
 }
