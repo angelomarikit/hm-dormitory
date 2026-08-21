@@ -60,9 +60,9 @@ export function AvailabilityOverview({
             {summary.totalCapacity > 0 ? ` · ${occupancyPct}% full` : ''}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Badge tone="available">{summary.availableRooms} available</Badge>
-            <Badge tone="limited">{summary.limitedRooms} limited</Badge>
-            <Badge tone="full">{summary.fullRooms} full</Badge>
+            <Badge tone="available">{`${summary.availableRooms} available`}</Badge>
+            <Badge tone="limited">{`${summary.limitedRooms} limited`}</Badge>
+            <Badge tone="full">{`${summary.fullRooms} full`}</Badge>
           </div>
         </article>
 
