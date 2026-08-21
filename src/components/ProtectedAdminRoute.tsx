@@ -8,6 +8,12 @@ export function ProtectedAdminRoute() {
   const { loading: siteLoading, site } = useSite()
   const { loading, user, isSiteAdmin, role } = useAuth()
 
+  const authorized = Boolean(site && user && isSiteAdmin && canManageContent(role))
+
+  if (authorized) {
+    return <Outlet />
+  }
+
   if (siteLoading || loading) {
     return (
       <div className="min-h-screen bg-paper">
@@ -16,9 +22,5 @@ export function ProtectedAdminRoute() {
     )
   }
 
-  if (!site || !user || !isSiteAdmin || !canManageContent(role)) {
-    return <Navigate to="/admin" replace />
-  }
-
-  return <Outlet />
+  return <Navigate to="/admin" replace />
 }

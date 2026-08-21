@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/Badge'
 import { useSite } from '@/contexts/SiteContext'
 import { useToast } from '@/contexts/ToastContext'
 import { toUserMessage } from '@/lib/errors'
+import { useModalDraft } from '@/hooks/useSessionDraft'
 import {
   createAmenity,
   deleteAmenity,
@@ -35,9 +36,11 @@ export default function AmenitiesPage() {
   const toast = useToast()
   const [loading, setLoading] = useState(true)
   const [items, setItems] = useState<Amenity[]>([])
-  const [form, setForm] = useState<AmenityInput>(emptyForm)
+  const { open, setOpen, editingId, setEditingId, form, setForm, resetDraft } = useModalDraft(
+    siteId ? `amenities:${siteId}` : null,
+    emptyForm,
+  )
   const [editing, setEditing] = useState<Amenity | null>(null)
-  const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [pending, setPending] = useState<Amenity | null>(null)
@@ -60,8 +63,18 @@ export default function AmenitiesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId])
 
+  useEffect(() => {
+    if (!editingId) {
+      setEditing(null)
+      return
+    }
+    const item = items.find((entry) => entry.id === editingId)
+    if (item) setEditing(item)
+  }, [editingId, items])
+
   function openCreate() {
     setEditing(null)
+    setEditingId(null)
     setForm({ ...emptyForm, sort_order: items.length + 1 })
     setNameError('')
     setOpen(true)
@@ -69,6 +82,7 @@ export default function AmenitiesPage() {
 
   function openEdit(item: Amenity) {
     setEditing(item)
+    setEditingId(item.id)
     setForm({
       name: item.name,
       description: item.description,
@@ -96,6 +110,7 @@ export default function AmenitiesPage() {
         toast.success('Amenity added.')
       }
       setOpen(false)
+      resetDraft()
       await load()
     } catch (error) {
       toast.error(toUserMessage(error, 'Unable to save amenity.'))

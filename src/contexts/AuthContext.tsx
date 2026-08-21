@@ -87,19 +87,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     void bootstrap()
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession)
       setUser(nextSession?.user ?? null)
+
       window.setTimeout(() => {
         void (async () => {
-          setLoading(true)
           try {
             await resolveMembership(nextSession?.user ?? null)
           } catch (error) {
             setAuthError(error instanceof Error ? error.message : 'Unable to verify access.')
             setMembership(null)
           } finally {
-            setLoading(false)
+            if (event === 'SIGNED_OUT') setLoading(false)
           }
         })()
       }, 0)

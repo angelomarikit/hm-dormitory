@@ -34,6 +34,7 @@ import {
 } from '@/services/roomService'
 import { deleteSiteAssetByUrl, uploadSiteAsset } from '@/services/storageService'
 import { getAvailableSpaces, getRoomStatus, getRoomStatusLabel } from '@/utils/roomAvailability'
+import { clearSessionDraft, readSessionDraft, writeSessionDraft } from '@/hooks/useSessionDraft'
 import type { Floor, FloorInput, RoomInput, RoomWithRelations } from '@/types/database'
 
 const emptyRoom: RoomInput = {
@@ -61,12 +62,23 @@ export default function RoomsPage() {
   const [loading, setLoading] = useState(true)
   const [floors, setFloors] = useState<Floor[]>([])
   const [rooms, setRooms] = useState<RoomWithRelations[]>([])
-  const [roomForm, setRoomForm] = useState<RoomInput>(emptyRoom)
-  const [floorForm, setFloorForm] = useState<FloorInput>(emptyFloor)
+  const draftKey = siteId ? `rooms:${siteId}` : null
+  const storedDraft = readSessionDraft<{
+    roomOpen: boolean
+    floorOpen: boolean
+    roomForm: RoomInput
+    floorForm: FloorInput
+    editingRoomId: string | null
+    editingFloorId: string | null
+  }>(draftKey)
+  const [roomForm, setRoomForm] = useState<RoomInput>(storedDraft?.roomForm ?? emptyRoom)
+  const [floorForm, setFloorForm] = useState<FloorInput>(storedDraft?.floorForm ?? emptyFloor)
   const [editingRoom, setEditingRoom] = useState<RoomWithRelations | null>(null)
   const [editingFloor, setEditingFloor] = useState<Floor | null>(null)
-  const [roomOpen, setRoomOpen] = useState(false)
-  const [floorOpen, setFloorOpen] = useState(false)
+  const [editingRoomId, setEditingRoomId] = useState<string | null>(storedDraft?.editingRoomId ?? null)
+  const [editingFloorId, setEditingFloorId] = useState<string | null>(storedDraft?.editingFloorId ?? null)
+  const [roomOpen, setRoomOpen] = useState(storedDraft?.roomOpen ?? false)
+  const [floorOpen, setFloorOpen] = useState(storedDraft?.floorOpen ?? false)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [pendingRoom, setPendingRoom] = useState<RoomWithRelations | null>(null)
@@ -95,6 +107,32 @@ export default function RoomsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId])
 
+  useEffect(() => {
+    writeSessionDraft(draftKey, {
+      roomOpen,
+      floorOpen,
+      roomForm,
+      floorForm,
+      editingRoomId,
+      editingFloorId,
+    })
+  }, [draftKey, roomOpen, floorOpen, roomForm, floorForm, editingRoomId, editingFloorId])
+
+  useEffect(() => {
+    if (editingRoomId) {
+      const room = rooms.find((item) => item.id === editingRoomId)
+      if (room) setEditingRoom(room)
+    } else {
+      setEditingRoom(null)
+    }
+    if (editingFloorId) {
+      const floor = floors.find((item) => item.id === editingFloorId)
+      if (floor) setEditingFloor(floor)
+    } else {
+      setEditingFloor(null)
+    }
+  }, [editingFloorId, editingRoomId, floors, rooms])
+
   const grouped = useMemo(
     () =>
       floors.map((floor) => ({
@@ -106,6 +144,7 @@ export default function RoomsPage() {
 
   function openCreateRoom(floorId?: string) {
     setEditingRoom(null)
+    setEditingRoomId(null)
     setRoomForm({
       ...emptyRoom,
       floor_id: floorId || floors[0]?.id || '',
@@ -116,6 +155,7 @@ export default function RoomsPage() {
 
   function openEditRoom(room: RoomWithRelations) {
     setEditingRoom(room)
+    setEditingRoomId(room.id)
     setRoomForm({
       floor_id: room.floor_id,
       room_number: room.room_number,
@@ -153,6 +193,9 @@ export default function RoomsPage() {
         toast.success('Room added.')
       }
       setRoomOpen(false)
+      setEditingRoom(null)
+      setEditingRoomId(null)
+      clearSessionDraft(draftKey)
       await load()
     } catch (error) {
       toast.error(toUserMessage(error, 'Unable to save room.'))
@@ -212,6 +255,8 @@ export default function RoomsPage() {
         toast.success('Floor added.')
       }
       setFloorOpen(false)
+      setEditingFloor(null)
+      setEditingFloorId(null)
       await load()
     } catch (error) {
       toast.error(toUserMessage(error, 'Unable to save floor.'))
@@ -273,6 +318,7 @@ export default function RoomsPage() {
             variant="outline"
             onClick={() => {
               setEditingFloor(null)
+              setEditingFloorId(null)
               setFloorForm({
                 ...emptyFloor,
                 floor_number: (floors.at(-1)?.floor_number ?? 0) + 1,
@@ -314,6 +360,7 @@ export default function RoomsPage() {
                     variant="ghost"
                     onClick={() => {
                       setEditingFloor(floor)
+                      setEditingFloorId(floor.id)
                       setFloorForm({
                         name: floor.name,
                         floor_number: floor.floor_number,

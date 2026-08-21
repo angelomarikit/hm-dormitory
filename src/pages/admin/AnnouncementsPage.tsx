@@ -19,6 +19,7 @@ import {
 } from '@/services/announcementService'
 import { formatDateTime } from '@/utils/format'
 import { toUserMessage } from '@/lib/errors'
+import { useModalDraft } from '@/hooks/useSessionDraft'
 import type { Announcement, AnnouncementInput } from '@/types/database'
 
 const emptyForm: AnnouncementInput = {
@@ -34,9 +35,11 @@ export default function AnnouncementsPage() {
   const [loading, setLoading] = useState(true)
   const [items, setItems] = useState<Announcement[]>([])
   const [query, setQuery] = useState('')
+  const { open, setOpen, editingId, setEditingId, form, setForm, resetDraft } = useModalDraft(
+    siteId ? `announcements:${siteId}` : null,
+    emptyForm,
+  )
   const [editing, setEditing] = useState<Announcement | null>(null)
-  const [form, setForm] = useState<AnnouncementInput>(emptyForm)
-  const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<Announcement | null>(null)
   const [errors, setErrors] = useState<{ title?: string; content?: string }>({})
@@ -58,6 +61,15 @@ export default function AnnouncementsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId])
 
+  useEffect(() => {
+    if (!editingId) {
+      setEditing(null)
+      return
+    }
+    const item = items.find((entry) => entry.id === editingId)
+    if (item) setEditing(item)
+  }, [editingId, items])
+
   const filtered = useMemo(
     () =>
       items.filter((item) =>
@@ -68,6 +80,7 @@ export default function AnnouncementsPage() {
 
   function openCreate() {
     setEditing(null)
+    setEditingId(null)
     setForm(emptyForm)
     setErrors({})
     setOpen(true)
@@ -75,6 +88,7 @@ export default function AnnouncementsPage() {
 
   function openEdit(item: Announcement) {
     setEditing(item)
+    setEditingId(item.id)
     setForm({
       title: item.title,
       content: item.content,
@@ -103,6 +117,8 @@ export default function AnnouncementsPage() {
         toast.success('Announcement saved.')
       }
       setOpen(false)
+      setEditing(null)
+      resetDraft()
       await load()
     } catch (error) {
       toast.error(toUserMessage(error, 'Unable to save announcement.'))

@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/Badge'
 import { useSite } from '@/contexts/SiteContext'
 import { useToast } from '@/contexts/ToastContext'
 import { toUserMessage } from '@/lib/errors'
+import { useModalDraft } from '@/hooks/useSessionDraft'
 import { createFaq, deleteFaq, fetchAllFaqs, updateFaq } from '@/services/faqService'
 import type { Faq, FaqInput } from '@/types/database'
 
@@ -27,9 +28,11 @@ export default function FaqsPage() {
   const toast = useToast()
   const [loading, setLoading] = useState(true)
   const [items, setItems] = useState<Faq[]>([])
-  const [form, setForm] = useState<FaqInput>(emptyForm)
+  const { open, setOpen, editingId, setEditingId, form, setForm, resetDraft } = useModalDraft(
+    siteId ? `faqs:${siteId}` : null,
+    emptyForm,
+  )
   const [editing, setEditing] = useState<Faq | null>(null)
-  const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [pending, setPending] = useState<Faq | null>(null)
   const [errors, setErrors] = useState<{ question?: string; answer?: string }>({})
@@ -51,8 +54,18 @@ export default function FaqsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId])
 
+  useEffect(() => {
+    if (!editingId) {
+      setEditing(null)
+      return
+    }
+    const item = items.find((entry) => entry.id === editingId)
+    if (item) setEditing(item)
+  }, [editingId, items])
+
   function openCreate() {
     setEditing(null)
+    setEditingId(null)
     setForm({ ...emptyForm, sort_order: items.length + 1 })
     setErrors({})
     setOpen(true)
@@ -60,6 +73,7 @@ export default function FaqsPage() {
 
   function openEdit(item: Faq) {
     setEditing(item)
+    setEditingId(item.id)
     setForm({
       question: item.question,
       answer: item.answer,
@@ -88,6 +102,7 @@ export default function FaqsPage() {
         toast.success('FAQ added.')
       }
       setOpen(false)
+      resetDraft()
       await load()
     } catch (error) {
       toast.error(toUserMessage(error, 'Unable to save FAQ.'))

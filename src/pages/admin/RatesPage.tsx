@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { useSite } from '@/contexts/SiteContext'
 import { useToast } from '@/contexts/ToastContext'
 import { toUserMessage } from '@/lib/errors'
-import { fetchRate, upsertRate } from '@/services/rateService'
+import { clearSessionDraft, readSessionDraft, writeSessionDraft } from '@/hooks/useSessionDraft'
 import type { RateUpdate } from '@/types/database'
 
 const emptyForm: RateUpdate = {
@@ -26,6 +26,7 @@ export default function RatesPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState<RateUpdate>(emptyForm)
+  const draftKey = siteId ? `rates:${siteId}` : null
 
   useEffect(() => {
     if (!siteId) return
@@ -35,6 +36,14 @@ export default function RatesPage() {
     async function load(currentSiteId: string) {
       setLoading(true)
       try {
+        const stored = readSessionDraft<RateUpdate>(`rates:${currentSiteId}`)
+        if (stored) {
+          if (!cancelled) {
+            setForm(stored)
+            setLoading(false)
+          }
+          return
+        }
         const rate = await fetchRate(currentSiteId)
         if (!cancelled && rate) {
           setForm({
@@ -58,15 +67,20 @@ export default function RatesPage() {
     return () => {
       cancelled = true
     }
-    // toast is stable enough for error reporting; omit it to avoid reload loops
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId])
+
+  useEffect(() => {
+    if (!draftKey || loading) return
+    writeSessionDraft(draftKey, form)
+  }, [draftKey, form, loading])
 
   async function save() {
     if (!siteId) return
     setSaving(true)
     try {
       await upsertRate(siteId, form)
+      clearSessionDraft(draftKey)
       toast.success('Rates saved.')
     } catch (error) {
       toast.error(toUserMessage(error, 'Unable to save rates.'))

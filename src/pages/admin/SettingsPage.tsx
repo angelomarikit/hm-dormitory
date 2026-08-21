@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader'
 import { Button } from '@/components/ui/Button'
 import { ImageUpload } from '@/components/ui/ImageUpload'
@@ -9,14 +9,11 @@ import { useToast } from '@/contexts/ToastContext'
 import { toUserMessage } from '@/lib/errors'
 import { updateSite } from '@/services/siteService'
 import { deleteSiteAssetByUrl, uploadSiteAsset } from '@/services/storageService'
-import type { SiteUpdate } from '@/types/database'
+import { clearSessionDraft, readSessionDraft, useSessionDraft } from '@/hooks/useSessionDraft'
+import type { Site, SiteUpdate } from '@/types/database'
 
-export default function SettingsPage() {
-  const { site, siteId, refreshSite } = useSite()
-  const toast = useToast()
-  const [saving, setSaving] = useState(false)
-  const [uploading, setUploading] = useState<string | null>(null)
-  const [form, setForm] = useState<SiteUpdate>({
+function formFromSite(site: Site | null): SiteUpdate {
+  return {
     name: site?.name ?? '',
     short_description: site?.short_description ?? '',
     hero_heading: site?.hero_heading ?? '',
@@ -32,7 +29,22 @@ export default function SettingsPage() {
     registration_url: site?.registration_url ?? '',
     google_maps_embed_url: site?.google_maps_embed_url ?? '',
     google_maps_directions_url: site?.google_maps_directions_url ?? '',
-  })
+  }
+}
+
+export default function SettingsPage() {
+  const { site, siteId, refreshSite } = useSite()
+  const toast = useToast()
+  const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState<string | null>(null)
+  const draftKey = siteId ? `settings:${siteId}` : null
+  const [form, setForm] = useSessionDraft<SiteUpdate>(draftKey, formFromSite(site))
+
+  useEffect(() => {
+    if (!site || !draftKey) return
+    if (readSessionDraft(draftKey)) return
+    setForm(formFromSite(site))
+  }, [draftKey, setForm, site])
 
   function updateField<K extends keyof SiteUpdate>(key: K, value: SiteUpdate[K]) {
     setForm((current) => ({ ...current, [key]: value }))
@@ -61,6 +73,7 @@ export default function SettingsPage() {
     setSaving(true)
     try {
       await updateSite(siteId, form)
+      clearSessionDraft(draftKey)
       await refreshSite()
       toast.success('Settings saved.')
     } catch (error) {

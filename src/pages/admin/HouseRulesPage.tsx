@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/Badge'
 import { useSite } from '@/contexts/SiteContext'
 import { useToast } from '@/contexts/ToastContext'
 import { toUserMessage } from '@/lib/errors'
+import { useModalDraft } from '@/hooks/useSessionDraft'
 import {
   createHouseRule,
   deleteHouseRule,
@@ -32,9 +33,11 @@ export default function HouseRulesAdminPage() {
   const toast = useToast()
   const [loading, setLoading] = useState(true)
   const [items, setItems] = useState<HouseRule[]>([])
-  const [form, setForm] = useState<HouseRuleInput>(emptyForm)
+  const { open, setOpen, editingId, setEditingId, form, setForm, resetDraft } = useModalDraft(
+    siteId ? `house-rules:${siteId}` : null,
+    emptyForm,
+  )
   const [editing, setEditing] = useState<HouseRule | null>(null)
-  const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [pending, setPending] = useState<HouseRule | null>(null)
   const [descriptionError, setDescriptionError] = useState('')
@@ -56,8 +59,18 @@ export default function HouseRulesAdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId])
 
+  useEffect(() => {
+    if (!editingId) {
+      setEditing(null)
+      return
+    }
+    const item = items.find((entry) => entry.id === editingId)
+    if (item) setEditing(item)
+  }, [editingId, items])
+
   function openCreate() {
     setEditing(null)
+    setEditingId(null)
     setForm({ ...emptyForm, sort_order: items.length + 1 })
     setDescriptionError('')
     setOpen(true)
@@ -65,6 +78,7 @@ export default function HouseRulesAdminPage() {
 
   function openEdit(item: HouseRule) {
     setEditing(item)
+    setEditingId(item.id)
     setForm({
       title: item.title,
       description: item.description,
@@ -91,6 +105,7 @@ export default function HouseRulesAdminPage() {
         toast.success('House rule added.')
       }
       setOpen(false)
+      resetDraft()
       await load()
     } catch (error) {
       toast.error(toUserMessage(error, 'Unable to save house rule.'))
