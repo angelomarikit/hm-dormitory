@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Bell,
   Building2,
@@ -16,6 +16,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext'
 import { useSite } from '@/contexts/SiteContext'
 import { Button } from '@/components/ui/Button'
+import { KeepAliveOutlet } from '@/components/KeepAliveOutlet'
 
 const navItems = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -120,7 +121,7 @@ export function AdminLayout() {
         ) : null}
 
         <div className="px-4 py-6 sm:px-6">
-          <Outlet />
+          <KeepAliveOutlet />
         </div>
       </div>
     </div>
