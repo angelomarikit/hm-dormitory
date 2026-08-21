@@ -8,6 +8,7 @@ import { useSite } from '@/contexts/SiteContext'
 import { useToast } from '@/contexts/ToastContext'
 import { toUserMessage } from '@/lib/errors'
 import { clearSessionDraft, readSessionDraft, writeSessionDraft } from '@/hooks/useSessionDraft'
+import { fetchRate, upsertRate } from '@/services/rateService'
 import type { RateUpdate } from '@/types/database'
 
 const emptyForm: RateUpdate = {
