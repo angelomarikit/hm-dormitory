@@ -25,11 +25,11 @@ export const SAMPLE_AMENITY_WIFI =
 export const SAMPLE_AMENITY_PARKING =
   'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=900&q=80'
 export const SAMPLE_AMENITY_LAUNDRY =
-  'https://images.unsplash.com/photo-1545173168-9f1942e6906f?auto=format&fit=crop&w=900&q=80'
+  'https://images.unsplash.com/photo-1582735689369-4fe89db7114c?auto=format&fit=crop&w=900&q=80'
 export const SAMPLE_AMENITY_STUDY =
   'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&w=900&q=80'
 export const SAMPLE_AMENITY_SECURITY =
-  'https://images.unsplash.com/photo-1557597774-9d273bec7d14?auto=format&fit=crop&w=900&q=80'
+  'https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=900&q=80'
 export const SAMPLE_AMENITY_COMMON =
   'https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=900&q=80'
 
@@ -393,6 +393,13 @@ export function getSiteSampleFlags(site: Site) {
       !isFilled(site.messenger_url) ||
       !isFilled(site.registration_url),
   }
+}
+
+export function resolveAmenityImage(url: string | null | undefined): string | null {
+  if (!url) return null
+  if (url.includes('photo-1545173168-9f1942e6906f')) return SAMPLE_AMENITY_LAUNDRY
+  if (url.includes('photo-1557597774-9d273bec7d14')) return SAMPLE_AMENITY_SECURITY
+  return url
 }
 
 export function withFallback<T>(items: T[], fallback: T[]): { items: T[]; isSample: boolean } {
