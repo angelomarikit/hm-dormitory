@@ -19,7 +19,7 @@ export function RatesSection({
     { label: 'Other fees', value: rate.other_fees },
     { label: 'Deposit', value: rate.deposit_information },
     { label: 'Additional notes', value: rate.additional_notes },
-  ].filter((item) => isFilled(item.value))
+  ].filter((item): item is { label: string; value: string } => isFilled(item.value))
 
   if (items.length === 0) return null
 
