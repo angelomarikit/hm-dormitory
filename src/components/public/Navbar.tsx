@@ -38,7 +38,7 @@ export function Navbar() {
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-2 sm:px-6">
         <Link
           to="/"
-          className="flex min-w-0 items-center"
+          className="flex min-w-0 items-center gap-3"
           aria-label={site?.name ?? 'Home'}
           onClick={(event) => {
             event.preventDefault()
@@ -46,6 +46,9 @@ export function Navbar() {
           }}
         >
           <SiteLogo url={site?.logo_url} name={site?.name} />
+          <span className="truncate font-display text-xl tracking-wide sm:text-2xl">
+            {site?.name ?? 'HM Dormitory'}
+          </span>
         </Link>
 
         <nav className="hidden items-center gap-6 lg:flex" aria-label="Primary">
