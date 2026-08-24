@@ -174,7 +174,7 @@ grant select, insert, update, delete on public.tenants to authenticated;
 
 -- Standard floors + rooms for HM Dormitory
 -- Ground / Second: 101-104 and 107-110 big (10), 105-106 small (4)
--- Third: 301-310 small (4) — 10 rooms, matching the other floors
+-- Third: 301-311 small (4) — 11 rooms, plus a study area
 
 insert into public.floors (site_id, name, floor_number, description, sort_order, is_active)
 select s.id, f.name, f.floor_number, f.description, f.sort_order, true
@@ -183,7 +183,7 @@ cross join (
   values
     ('Ground Floor', 1, 'Ten rooms. Big rooms hold 10 boarders; small rooms hold 4.', 1),
     ('Second Floor', 2, 'Ten rooms. Big rooms hold 10 boarders; small rooms hold 4.', 2),
-    ('Third Floor', 3, 'Ten small rooms, each holding 4 boarders.', 3)
+    ('Third Floor', 3, 'Eleven small rooms, each holding 4 boarders, plus a study area.', 3)
 ) as f(name, floor_number, description, sort_order)
 where s.slug = 'hm-dormitory'
 on conflict (site_id, floor_number) do update
@@ -226,7 +226,8 @@ with catalog as (
       (3, '307', 'Small room', 4, 'small', 307),
       (3, '308', 'Small room', 4, 'small', 308),
       (3, '309', 'Small room', 4, 'small', 309),
-      (3, '310', 'Small room', 4, 'small', 310)
+      (3, '310', 'Small room', 4, 'small', 310),
+      (3, '311', 'Small room', 4, 'small', 311)
   ) as t(floor_number, room_number, room_name, capacity, room_type, sort_order)
 )
 insert into public.rooms (
@@ -274,7 +275,7 @@ where r.site_id = (select id from public.sites where slug = 'hm-dormitory')
   and r.room_number not in (
     '101','102','103','104','105','106','107','108','109','110',
     '201','202','203','204','205','206','207','208','209','210',
-    '301','302','303','304','305','306','307','308','309','310'
+    '301','302','303','304','305','306','307','308','309','310','311'
   );
 
 -- Recalculate occupancy from active tenants after the layout is in place

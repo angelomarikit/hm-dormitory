@@ -32,7 +32,7 @@ export const STANDARD_FLOORS: StandardFloorSpec[] = [
   {
     floorNumber: 3,
     name: 'Third Floor',
-    description: 'Ten small rooms, each holding 4 boarders.',
+    description: 'Eleven small rooms, each holding 4 boarders, plus a study area.',
     sortOrder: 3,
   },
 ]
@@ -57,9 +57,9 @@ function mixedFloorRooms(floorNumber: number): StandardRoomSpec[] {
   return rooms
 }
 
-function smallFloorRooms(floorNumber: number): StandardRoomSpec[] {
+function smallFloorRooms(floorNumber: number, count = 11): StandardRoomSpec[] {
   const prefix = String(floorNumber)
-  return Array.from({ length: 10 }, (_, index) => {
+  return Array.from({ length: count }, (_, index) => {
     const n = index + 1
     const number = `${prefix}${String(n).padStart(2, '0')}`
     return {
