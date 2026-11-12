@@ -22,6 +22,7 @@ const RegisterStatusPage = lazy(() => import('@/pages/public/RegisterStatusPage'
 const DashboardPage = lazy(() => import('@/pages/admin/DashboardPage'))
 const RegistrationsPage = lazy(() => import('@/pages/admin/RegistrationsPage'))
 const TenantsPage = lazy(() => import('@/pages/admin/TenantsPage'))
+const BoardersDirectoryPage = lazy(() => import('@/pages/admin/BoardersDirectoryPage'))
 const AnnouncementsPage = lazy(() => import('@/pages/admin/AnnouncementsPage'))
 const AdminRoomsPage = lazy(() => import('@/pages/admin/RoomsPage'))
 const AmenitiesPage = lazy(() => import('@/pages/admin/AmenitiesPage'))
@@ -69,6 +70,7 @@ export default function App() {
             <Route path="/admin/dashboard" element={<DashboardPage />} />
             <Route path="/admin/registrations" element={<RegistrationsPage />} />
             <Route path="/admin/tenants" element={<TenantsPage />} />
+            <Route path="/admin/boarders" element={<BoardersDirectoryPage />} />
             <Route path="/admin/announcements" element={<AnnouncementsPage />} />
             <Route path="/admin/rooms" element={<AdminRoomsPage />} />
             <Route path="/admin/billing" element={<BillingPage />} />

@@ -13,7 +13,7 @@ import { fetchAllAnnouncements } from '@/services/announcementService'
 import { fetchAllFloors } from '@/services/floorService'
 import { ensureStandardLayout } from '@/services/layoutService'
 import { buildAvailabilitySummary, fetchAllRooms } from '@/services/roomService'
-import { fetchBills } from '@/services/billingService'
+import { fetchBills, syncLiveBilling } from '@/services/billingService'
 import { fetchPayments } from '@/services/paymentService'
 import { fetchRegistrations } from '@/services/registrationService'
 import { fetchActiveTenants } from '@/services/tenantService'
@@ -37,6 +37,9 @@ export default function DashboardPage() {
   const [pendingApps, setPendingApps] = useState(0)
   const [collected, setCollected] = useState(0)
   const [outstanding, setOutstanding] = useState(0)
+  const [unpaidBoarders, setUnpaidBoarders] = useState<
+    Array<{ id: string; name: string; room: string; amount: number; status: string }>
+  >([])
 
   useEffect(() => {
     if (!siteId) return
@@ -62,6 +65,7 @@ export default function DashboardPage() {
         setStats(buildAvailabilitySummary(activeRooms, activeFloors))
         setAnnouncementCount(announcements.length)
         try {
+          await syncLiveBilling(currentSiteId).catch(() => undefined)
           const [bills, payments, registrations] = await Promise.all([
             fetchBills(currentSiteId),
             fetchPayments(currentSiteId),
@@ -75,10 +79,28 @@ export default function DashboardPage() {
           setOutstanding(
             bills.reduce((sum, bill) => sum + Math.max(0, bill.total_centavos - bill.paid_centavos), 0),
           )
+          const openBills = bills.filter(
+            (bill) => bill.status !== 'paid' && bill.status !== 'voided' && bill.total_centavos > bill.paid_centavos,
+          )
+          const unpaidMap = new Map<string, { id: string; name: string; room: string; amount: number; status: string }>()
+          for (const bill of openBills) {
+            const tenant = nextTenants.find((item) => item.id === bill.tenant_id)
+            const current = unpaidMap.get(bill.tenant_id)
+            const amount = Math.max(0, bill.total_centavos - bill.paid_centavos)
+            unpaidMap.set(bill.tenant_id, {
+              id: bill.tenant_id,
+              name: tenant?.full_name ?? 'Boarder',
+              room: tenant?.rooms?.room_number ?? '—',
+              amount: (current?.amount ?? 0) + amount,
+              status: bill.status === 'overdue' || current?.status === 'overdue' ? 'overdue' : bill.status,
+            })
+          }
+          setUnpaidBoarders([...unpaidMap.values()].sort((a, b) => b.amount - a.amount))
         } catch {
           setPendingApps(0)
           setCollected(0)
           setOutstanding(0)
+          setUnpaidBoarders([])
         }
       } catch (error) {
         if (!cancelled) {
@@ -143,6 +165,37 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
+          {unpaidBoarders.length > 0 ? (
+            <section className="mt-6 rounded-2xl border border-line bg-ink px-5 py-5 text-white">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="text-xs tracking-[0.22em] text-gold uppercase">Still unpaid</p>
+                  <p className="mt-1 font-display text-3xl">{unpaidBoarders.length} boarders</p>
+                </div>
+                <Link to="/admin/billing" className="text-sm text-gold underline underline-offset-4">
+                  Open billing
+                </Link>
+              </div>
+              <ul className="mt-4 divide-y divide-white/10">
+                {unpaidBoarders.slice(0, 8).map((item) => (
+                  <li key={item.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                    <span>
+                      {item.name}
+                      <span className="text-white/60"> · Room {item.room}</span>
+                    </span>
+                    <span className="text-gold">
+                      {formatPeso(item.amount)}
+                      {item.status === 'overdue' ? ' · overdue' : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : (
+            <section className="mt-6 rounded-2xl border border-line bg-white px-5 py-4 text-sm text-muted">
+              No unpaid boarders for the current month.
+            </section>
+          )}
           <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatCard label="Boarders staying" value={tenants.length} />
             <StatCard label="Beds occupied" value={stats.occupiedSpaces} />

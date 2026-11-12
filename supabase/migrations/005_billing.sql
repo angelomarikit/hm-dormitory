@@ -188,11 +188,13 @@ alter table public.bills force row level security;
 alter table public.bill_items enable row level security;
 alter table public.bill_items force row level security;
 
+drop policy if exists "Cms billing settings" on public.billing_settings;
 create policy "Cms billing settings"
 on public.billing_settings for all to authenticated
 using (public.is_cms_staff(site_id))
 with check (public.is_cms_staff(site_id));
 
+drop policy if exists "Read bills" on public.bills;
 create policy "Read bills"
 on public.bills for select to authenticated
 using (
@@ -200,15 +202,18 @@ using (
   or exists (select 1 from public.tenants t where t.id = tenant_id and t.user_id = auth.uid())
 );
 
+drop policy if exists "Cms write bills" on public.bills;
 create policy "Cms write bills"
 on public.bills for insert to authenticated
 with check (public.is_cms_staff(site_id));
 
+drop policy if exists "Cms update bills" on public.bills;
 create policy "Cms update bills"
 on public.bills for update to authenticated
 using (public.is_cms_staff(site_id))
 with check (public.is_cms_staff(site_id));
 
+drop policy if exists "Read bill items" on public.bill_items;
 create policy "Read bill items"
 on public.bill_items for select to authenticated
 using (
@@ -222,6 +227,7 @@ using (
   )
 );
 
+drop policy if exists "Cms write bill items" on public.bill_items;
 create policy "Cms write bill items"
 on public.bill_items for insert to authenticated
 with check (

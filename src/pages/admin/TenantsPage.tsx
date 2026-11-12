@@ -14,7 +14,6 @@ import { Textarea } from '@/components/ui/Textarea'
 import { useSite } from '@/contexts/SiteContext'
 import { useToast } from '@/contexts/ToastContext'
 import { roomTypeLabel } from '@/data/standardRooms'
-import { useModalDraft } from '@/hooks/useSessionDraft'
 import { toUserMessage } from '@/lib/errors'
 import { fetchAllFloors } from '@/services/floorService'
 import { ensureStandardLayout } from '@/services/layoutService'
@@ -58,10 +57,9 @@ export default function TenantsPage() {
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active')
   const [floorFilter, setFloorFilter] = useState<FloorFilter>('all')
-  const { open, setOpen, editingId, setEditingId, form, setForm, resetDraft } = useModalDraft(
-    siteId ? `tenants:${siteId}` : null,
-    emptyForm,
-  )
+  const [open, setOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [form, setForm] = useState<TenantInput>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<{ full_name?: string; room_id?: string; started_on?: string }>({})
   const [leaving, setLeaving] = useState<TenantWithRoom | null>(null)
@@ -188,7 +186,9 @@ export default function TenantsPage() {
         await createTenant(siteId, form)
         toast.success('Tenant added.')
       }
-      resetDraft()
+      setOpen(false)
+      setEditingId(null)
+      setForm(emptyForm)
       await load()
     } catch (error) {
       toast.error(toUserMessage(error, 'Unable to save tenant.'))

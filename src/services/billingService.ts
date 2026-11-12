@@ -30,6 +30,14 @@ export async function generateMonthlyBills(siteId: string, periodStart: string):
   return Number(data ?? 0)
 }
 
+export async function syncLiveBilling(siteId: string): Promise<void> {
+  const bills = await supabase.rpc('ensure_monthly_bills', { p_site_id: siteId })
+  if (bills.error && !/could not find|schema cache/i.test(bills.error.message)) {
+    throw new Error(bills.error.message)
+  }
+  await supabase.rpc('ensure_due_reminders', { p_site_id: siteId })
+}
+
 export async function updateRoomRent(siteId: string, roomId: string, monthlyRentCentavos: number) {
   const { error: roomError } = await supabase
     .from('rooms')

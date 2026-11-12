@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { throwIfError } from '@/lib/errors'
 import type { Tenant, TenantInput, TenantWithRoom } from '@/types/database'
+import type { BoarderProfile } from '@/types/ops'
 
 const TENANT_SELECT = `
   *,
@@ -29,6 +30,14 @@ export async function fetchAllTenants(siteId: string): Promise<TenantWithRoom[]>
     error,
     mapTenantError(error?.message, 'Unable to load tenants.'),
   )
+}
+
+export async function fetchBoarderProfiles(siteId: string): Promise<BoarderProfile[]> {
+  const { data, error } = await supabase
+    .from('boarder_profiles')
+    .select('*')
+    .eq('site_id', siteId)
+  return throwIfError(data as BoarderProfile[] | null, error, 'Unable to load boarder profiles.')
 }
 
 export async function fetchActiveTenants(siteId: string): Promise<TenantWithRoom[]> {

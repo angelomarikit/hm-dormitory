@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { throwIfError } from '@/lib/errors'
-import { signUpWithPassword } from '@/services/authService'
+import { signInWithPassword, signUpWithPassword } from '@/services/authService'
 import { uploadPrivateFile } from '@/services/privateStorage'
 import { todayISO } from '@/utils/format'
 import type { Registration, RegistrationInput } from '@/types/ops'
@@ -10,63 +10,63 @@ export async function submitRegistration(
   input: RegistrationInput,
   idFile: File | null,
 ): Promise<Registration> {
-  const user = await signUpWithPassword(input.email.trim(), input.password, input.full_name.trim())
-  if (!user) {
-    throw new Error('Check your email to confirm the account, then sign in to finish registration.')
+  const email = input.email.trim().toLowerCase()
+  const { data: existingSession } = await supabase.auth.getSession()
+  const existingEmail = existingSession.session?.user.email?.toLowerCase()
+  if (existingEmail && existingEmail !== email) {
+    await supabase.auth.signOut()
   }
 
-  const { data: refData, error: refError } = await supabase.rpc('next_registration_reference', {
-    target_site_id: siteId,
-  })
-  if (refError || !refData) {
-    throw new Error('Unable to create an application number.')
+  try {
+    await signUpWithPassword(email, input.password, input.full_name.trim())
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    if (!/already registered|already exists/i.test(message)) {
+      throw error
+    }
   }
 
-  const { data, error } = await supabase
-    .from('registrations')
-    .insert({
+  const { data: sessionData } = await supabase.auth.getSession()
+  if (!sessionData.session) {
+    try {
+      await signInWithPassword(email, input.password)
+    } catch {
+      throw new Error(
+        'We created your login. Confirm the email if asked, then sign in so the application can be saved to the database.',
+      )
+    }
+  }
+
+  const { data, error } = await supabase.rpc('submit_site_registration', {
+    payload: {
       site_id: siteId,
-      user_id: user.id,
-      reference_number: String(refData),
-      status: 'pending',
       full_name: input.full_name.trim(),
-      date_of_birth: input.date_of_birth || null,
-      gender: input.gender || null,
-      nationality: input.nationality || null,
-      home_address: input.home_address.trim() || null,
-      occupancy_type: input.occupancy_type || null,
-      school_or_company: input.school_or_company.trim() || null,
-      email: input.email.trim(),
+      date_of_birth: input.date_of_birth || '',
+      gender: input.gender || '',
+      nationality: input.nationality || '',
+      home_address: input.home_address.trim(),
+      occupancy_type: input.occupancy_type || '',
+      school_or_company: input.school_or_company.trim(),
+      email,
       mobile: input.mobile.trim(),
-      emergency_name: input.emergency_name.trim() || null,
-      emergency_relationship: input.emergency_relationship.trim() || null,
-      emergency_phone: input.emergency_phone.trim() || null,
-      preferred_room_type: input.preferred_room_type || null,
-      preferred_room_id: input.preferred_room_id || null,
-      preferred_move_in: input.preferred_move_in || null,
-      expected_stay: input.expected_stay.trim() || null,
-      special_requests: input.special_requests.trim() || null,
-      terms_accepted_at: new Date().toISOString(),
-    })
-    .select('*')
-    .single()
-
-  const registration = throwIfError(data as Registration | null, error, 'Unable to submit registration.')
-
-  await supabase.from('boarder_profiles').insert({
-    site_id: siteId,
-    user_id: user.id,
-    status: 'pending',
-    occupancy_type: input.occupancy_type || null,
-    school_or_company: input.school_or_company.trim() || null,
-    date_of_birth: input.date_of_birth || null,
-    gender: input.gender || null,
-    nationality: input.nationality || null,
-    home_address: input.home_address.trim() || null,
-    emergency_name: input.emergency_name.trim() || null,
-    emergency_relationship: input.emergency_relationship.trim() || null,
-    emergency_phone: input.emergency_phone.trim() || null,
+      emergency_name: input.emergency_name.trim(),
+      emergency_relationship: input.emergency_relationship.trim(),
+      emergency_phone: input.emergency_phone.trim(),
+      preferred_room_type: input.preferred_room_type || '',
+      preferred_room_id: input.preferred_room_id || '',
+      preferred_move_in: input.preferred_move_in || '',
+      expected_stay: input.expected_stay.trim(),
+      special_requests: input.special_requests.trim(),
+    },
   })
+
+  const registration = throwIfError(
+    data as Registration | null,
+    error,
+    error?.message?.includes('schema cache')
+      ? 'Run supabase/migrations/009_live_ops.sql in the SQL Editor so applications save to the database.'
+      : 'Unable to submit registration.',
+  )
 
   if (idFile) {
     const path = await uploadPrivateFile(

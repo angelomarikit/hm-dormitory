@@ -7,6 +7,7 @@ import {
   Building2,
   CircleHelp,
   ClipboardList,
+  Contact,
   FileText,
   LayoutDashboard,
   LogOut,
@@ -29,7 +30,8 @@ import { KeepAliveOutlet } from '@/components/KeepAliveOutlet'
 const navItems = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/admin/registrations', label: 'Registrations', icon: ClipboardList },
-  { to: '/admin/tenants', label: 'Boarders', icon: Users },
+  { to: '/admin/boarders', label: 'Boarder directory', icon: Contact },
+  { to: '/admin/tenants', label: 'Assign beds', icon: Users },
   { to: '/admin/rooms', label: 'Rooms & Beds', icon: Building2 },
   { to: '/admin/billing', label: 'Billing', icon: FileText },
   { to: '/admin/payments', label: 'Payments', icon: Banknote },

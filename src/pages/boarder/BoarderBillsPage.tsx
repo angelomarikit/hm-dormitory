@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/Badge'
 import { useSite } from '@/contexts/SiteContext'
 import { useBoarderTenant } from '@/hooks/useBoarderTenant'
-import { fetchBillsForTenant } from '@/services/billingService'
+import { fetchBillsForTenant, syncLiveBilling } from '@/services/billingService'
 import { formatPeso } from '@/utils/money'
 import { formatDate } from '@/utils/format'
 import type { Bill } from '@/types/ops'
@@ -15,7 +15,11 @@ export default function BoarderBillsPage() {
 
   useEffect(() => {
     if (!siteId || !tenant) return
-    void fetchBillsForTenant(siteId, tenant.id).then(setBills).catch(() => setBills([]))
+    void syncLiveBilling(siteId)
+      .catch(() => undefined)
+      .then(() => fetchBillsForTenant(siteId, tenant.id))
+      .then(setBills)
+      .catch(() => setBills([]))
   }, [siteId, tenant])
 
   return (

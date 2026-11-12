@@ -139,52 +139,84 @@ alter table public.maintenance_requests force row level security;
 alter table public.activity_logs enable row level security;
 alter table public.activity_logs force row level security;
 
+create or replace function public.boarder_can_read_notice(p_notice_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.notice_recipients nr
+    join public.tenants t on t.id = nr.tenant_id
+    where nr.notice_id = p_notice_id
+      and t.user_id = auth.uid()
+  );
+$$;
+
+create or replace function public.notice_is_cms_managed(p_notice_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.notices n
+    where n.id = p_notice_id
+      and public.is_cms_staff(n.site_id)
+  );
+$$;
+
+grant execute on function public.boarder_can_read_notice(uuid) to authenticated, anon;
+grant execute on function public.notice_is_cms_managed(uuid) to authenticated, anon;
+
+drop policy if exists "Staff manage notices" on public.notices;
 create policy "Staff manage notices"
 on public.notices for all to authenticated
 using (public.is_cms_staff(site_id))
 with check (public.is_cms_staff(site_id));
 
+drop policy if exists "Ops read notices" on public.notices;
+create policy "Ops read notices"
+on public.notices for select to authenticated
+using (public.is_ops_staff(site_id));
+
+drop policy if exists "Boarders read published notices" on public.notices;
 create policy "Boarders read published notices"
 on public.notices for select to authenticated
 using (
   published_at is not null
   and (expires_at is null or expires_at > timezone('utc', now()))
+  and public.is_boarder_for_site(site_id)
   and (
-    public.is_ops_staff(site_id)
-    or (
-      public.is_boarder_for_site(site_id)
-      and (
-        audience = 'all_boarders'
-        or exists (
-          select 1 from public.notice_recipients nr
-          join public.tenants t on t.id = nr.tenant_id
-          where nr.notice_id = notices.id and t.user_id = auth.uid()
-        )
-      )
-    )
+    audience = 'all_boarders'
+    or public.boarder_can_read_notice(id)
   )
 );
 
+drop policy if exists "Staff notice recipients" on public.notice_recipients;
 create policy "Staff notice recipients"
 on public.notice_recipients for all to authenticated
-using (
-  exists (select 1 from public.notices n where n.id = notice_id and public.is_cms_staff(n.site_id))
-)
-with check (
-  exists (select 1 from public.notices n where n.id = notice_id and public.is_cms_staff(n.site_id))
-);
+using (public.notice_is_cms_managed(notice_id))
+with check (public.notice_is_cms_managed(notice_id));
 
+drop policy if exists "Boarder notice recipients" on public.notice_recipients;
 create policy "Boarder notice recipients"
 on public.notice_recipients for select to authenticated
 using (
   exists (select 1 from public.tenants t where t.id = tenant_id and t.user_id = auth.uid())
 );
 
+drop policy if exists "Boarder mark notice read" on public.notice_recipients;
 create policy "Boarder mark notice read"
 on public.notice_recipients for update to authenticated
 using (exists (select 1 from public.tenants t where t.id = tenant_id and t.user_id = auth.uid()))
 with check (exists (select 1 from public.tenants t where t.id = tenant_id and t.user_id = auth.uid()));
 
+drop policy if exists "Read conversations" on public.conversations;
 create policy "Read conversations"
 on public.conversations for select to authenticated
 using (
@@ -192,6 +224,7 @@ using (
   or exists (select 1 from public.tenants t where t.id = tenant_id and t.user_id = auth.uid())
 );
 
+drop policy if exists "Boarder insert conversation" on public.conversations;
 create policy "Boarder insert conversation"
 on public.conversations for insert to authenticated
 with check (
@@ -204,11 +237,13 @@ with check (
   or public.is_ops_staff(conversations.site_id)
 );
 
+drop policy if exists "Staff update conversations" on public.conversations;
 create policy "Staff update conversations"
 on public.conversations for update to authenticated
 using (public.is_ops_staff(site_id))
 with check (public.is_ops_staff(site_id));
 
+drop policy if exists "Read messages" on public.messages;
 create policy "Read messages"
 on public.messages for select to authenticated
 using (
@@ -222,6 +257,7 @@ using (
   )
 );
 
+drop policy if exists "Send messages" on public.messages;
 create policy "Send messages"
 on public.messages for insert to authenticated
 with check (
@@ -237,6 +273,7 @@ with check (
   )
 );
 
+drop policy if exists "Read states" on public.message_read_states;
 create policy "Read states"
 on public.message_read_states for all to authenticated
 using (user_id = auth.uid() or public.is_ops_staff((
@@ -244,6 +281,7 @@ using (user_id = auth.uid() or public.is_ops_staff((
 )))
 with check (user_id = auth.uid());
 
+drop policy if exists "Maintenance read" on public.maintenance_requests;
 create policy "Maintenance read"
 on public.maintenance_requests for select to authenticated
 using (
@@ -251,6 +289,7 @@ using (
   or exists (select 1 from public.tenants t where t.id = tenant_id and t.user_id = auth.uid())
 );
 
+drop policy if exists "Boarder insert maintenance" on public.maintenance_requests;
 create policy "Boarder insert maintenance"
 on public.maintenance_requests for insert to authenticated
 with check (
@@ -262,15 +301,18 @@ with check (
   )
 );
 
+drop policy if exists "Ops update maintenance" on public.maintenance_requests;
 create policy "Ops update maintenance"
 on public.maintenance_requests for update to authenticated
 using (public.is_ops_staff(site_id))
 with check (public.is_ops_staff(site_id));
 
+drop policy if exists "Staff read activity" on public.activity_logs;
 create policy "Staff read activity"
 on public.activity_logs for select to authenticated
 using (public.is_cms_staff(site_id));
 
+drop policy if exists "Staff insert activity" on public.activity_logs;
 create policy "Staff insert activity"
 on public.activity_logs for insert to authenticated
 with check (public.is_cms_staff(site_id));

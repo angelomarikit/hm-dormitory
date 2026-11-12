@@ -3,23 +3,31 @@ import { Link } from 'react-router-dom'
 import { StatCard } from '@/components/admin/StatCard'
 import { useSite } from '@/contexts/SiteContext'
 import { useBoarderTenant } from '@/hooks/useBoarderTenant'
-import { fetchBillsForTenant } from '@/services/billingService'
-import { fetchNotices } from '@/services/commsService'
+import { fetchBillsForTenant, syncLiveBilling } from '@/services/billingService'
+import { fetchNotices, fetchNotifications } from '@/services/commsService'
 import { fetchBeds } from '@/services/bedService'
 import { formatPeso } from '@/utils/money'
-import type { Bill, Notice } from '@/types/ops'
+import type { AppNotification, Bill, Notice } from '@/types/ops'
 
 export default function BoarderHomePage() {
   const { site, siteId } = useSite()
   const { tenant, boarderProfile } = useBoarderTenant()
   const [bills, setBills] = useState<Bill[]>([])
   const [notices, setNotices] = useState<Notice[]>([])
+  const [alerts, setAlerts] = useState<AppNotification[]>([])
   const [bedCode, setBedCode] = useState<string | null>(null)
 
   useEffect(() => {
     if (!siteId || !tenant) return
-    void fetchBillsForTenant(siteId, tenant.id).then(setBills).catch(() => setBills([]))
+    void syncLiveBilling(siteId)
+      .catch(() => undefined)
+      .then(() => fetchBillsForTenant(siteId, tenant.id))
+      .then(setBills)
+      .catch(() => setBills([]))
     void fetchNotices(siteId).then(setNotices).catch(() => setNotices([]))
+    void fetchNotifications()
+      .then((items) => setAlerts(items.filter((item) => !item.is_read)))
+      .catch(() => setAlerts([]))
     if (tenant.bed_id) {
       void fetchBeds(siteId)
         .then((beds) => setBedCode(beds.find((bed) => bed.id === tenant.bed_id)?.bed_code ?? null))
@@ -37,6 +45,16 @@ export default function BoarderHomePage() {
       <p className="mt-2 text-sm text-muted">
         Room {tenant?.rooms?.room_number ?? '—'} {bedCode ? `· Bed ${bedCode}` : ''} · {boarderProfile?.occupancy_type ?? 'Boarder'}
       </p>
+      {alerts.length > 0 ? (
+        <section className="mt-6 rounded-2xl border border-line bg-ink px-5 py-4 text-white">
+          <p className="text-xs tracking-[0.22em] text-gold uppercase">Due reminder</p>
+          <p className="mt-2 text-sm">{alerts[0].title}</p>
+          <p className="mt-1 text-sm text-white/70">{alerts[0].body}</p>
+          <Link to="/boarder/bills" className="mt-3 inline-block text-sm text-gold underline underline-offset-4">
+            View bills
+          </Link>
+        </section>
+      ) : null}
       <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <StatCard label="Open balance" value={formatPeso(balance)} />
         <StatCard label="Open bills" value={open.length} />

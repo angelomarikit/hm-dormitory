@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react'
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader'
 import { Badge } from '@/components/ui/Badge'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
 import { useSite } from '@/contexts/SiteContext'
 import { useToast } from '@/contexts/ToastContext'
-import { fetchBills, generateMonthlyBills } from '@/services/billingService'
+import { fetchBills, syncLiveBilling } from '@/services/billingService'
 import { fetchActiveTenants } from '@/services/tenantService'
 import { formatPeso } from '@/utils/money'
 import { formatDate } from '@/utils/format'
@@ -18,10 +16,10 @@ export default function BillingPage() {
   const toast = useToast()
   const [bills, setBills] = useState<Bill[]>([])
   const [tenants, setTenants] = useState<TenantWithRoom[]>([])
-  const [period, setPeriod] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`)
 
   async function load() {
     if (!siteId) return
+    await syncLiveBilling(siteId)
     setBills(await fetchBills(siteId))
     setTenants(await fetchActiveTenants(siteId))
   }
@@ -39,26 +37,7 @@ export default function BillingPage() {
     <div>
       <AdminPageHeader
         title="Billing"
-        description="One invoice per occupied bed that has rent set. Empty beds and boarders without a bed are skipped. Same month will not duplicate."
-        action={
-          <div className="flex flex-wrap items-end gap-2">
-            <Input label="Period start" type="date" value={period} onChange={(e) => setPeriod(e.target.value)} />
-            <Button
-              onClick={async () => {
-                if (!siteId) return
-                try {
-                  const count = await generateMonthlyBills(siteId, period)
-                  toast.success(`${count} new bill(s) created.`)
-                  await load()
-                } catch (error) {
-                  toast.error(toUserMessage(error, 'Unable to generate bills.'))
-                }
-              }}
-            >
-              Generate month
-            </Button>
-          </div>
-        }
+        description="Bills refresh live for every occupied bed. Rent is due at the end of the month. Empty beds are not billed."
       />
       <div className="mt-6 overflow-x-auto rounded-xl border border-line bg-white">
         <table className="min-w-full text-left text-sm">

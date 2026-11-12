@@ -15,6 +15,15 @@ export async function fetchNotices(siteId: string): Promise<Notice[]> {
     .select('*')
     .eq('site_id', siteId)
     .order('created_at', { ascending: false })
+  if (error) {
+    throw new Error(
+      /does not exist|schema cache/i.test(error.message)
+        ? 'Notices are not set up yet. Run supabase/migrations/007_comms.sql then 012_fix_notices_rls.sql in the SQL Editor.'
+        : /recursion/i.test(error.message)
+          ? 'Run supabase/migrations/012_fix_notices_rls.sql in the SQL Editor, then refresh this page.'
+          : error.message,
+    )
+  }
   return throwIfError(data as Notice[] | null, error, 'Unable to load notices.')
 }
 

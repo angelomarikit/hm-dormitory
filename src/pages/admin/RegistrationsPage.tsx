@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -12,6 +13,7 @@ import { fetchAllRooms } from '@/services/roomService'
 import { fetchActiveTenants } from '@/services/tenantService'
 import { approveRegistration, fetchRegistrations, setRegistrationStatus } from '@/services/registrationService'
 import { logActivity } from '@/services/commsService'
+import { supabase } from '@/lib/supabase'
 import { formatDateTime } from '@/utils/format'
 import { formatPeso } from '@/utils/money'
 import { toUserMessage } from '@/lib/errors'
@@ -47,6 +49,20 @@ export default function RegistrationsPage() {
 
   useEffect(() => {
     void load().catch((error) => toast.error(toUserMessage(error, 'Unable to load registrations.')))
+    if (!siteId) return
+    const channel = supabase
+      .channel(`registrations:${siteId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'registrations', filter: `site_id=eq.${siteId}` },
+        () => {
+          void load().catch(() => undefined)
+        },
+      )
+      .subscribe()
+    return () => {
+      void supabase.removeChannel(channel)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId])
 
@@ -54,7 +70,18 @@ export default function RegistrationsPage() {
 
   return (
     <div>
-      <AdminPageHeader title="Registrations" description="Review applications from the website registration form. Approval assigns a room and bed." />
+      <AdminPageHeader
+        title="Registrations"
+        description="Applications from the public form are saved in the database. Every admin on this site sees the same list."
+      />
+      {items.length === 0 ? (
+        <div className="mt-6">
+          <EmptyState
+            title="No applications in the database yet"
+            description="When someone submits the website registration form, it is stored here — not in the browser. Refresh or wait; new rows appear for every admin."
+          />
+        </div>
+      ) : (
       <div className="mt-6 overflow-x-auto rounded-xl border border-line bg-white">
         <table className="min-w-full text-left text-sm">
           <thead className="border-b border-line text-xs tracking-[0.12em] text-muted uppercase">
@@ -87,6 +114,7 @@ export default function RegistrationsPage() {
           </tbody>
         </table>
       </div>
+      )}
 
       <Modal open={Boolean(open)} title={open?.full_name ?? 'Application'} onClose={() => setOpen(null)}>
         {open ? (

@@ -23,6 +23,14 @@ Run these in the **Supabase SQL Editor**, one file at a time, on the same projec
 
 8. **`migrations/008_bed_billing.sql`** — rent lives on each bed; Generate month bills only boarders assigned to a bed
 
+9. **`migrations/009_live_ops.sql`** — live end-of-month bills, 7-day due notices, registration RPC, realtime
+
+10. **`migrations/011_fix_due_on_ambiguous.sql`** — fix billing `due_on` name clash
+
+11. **`migrations/012_fix_notices_rls.sql`** — fix Notices page failing to load (policy recursion)
+
+12. **`migrations/010_reset_hm_dormitory_ops.sql`** — optional production wipe of test boarders/bills/messages (keeps rooms and website copy)
+
 ## After each file
 
 In the SQL Editor, check there is no error. Then tell the app it is safe to use the new tables (refresh admin after 004).

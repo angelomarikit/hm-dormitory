@@ -109,7 +109,7 @@ export function RegistrationForm({ onClose }: { onClose?: () => void }) {
   return (
     <div>
       <p className="text-sm text-muted">
-        Step {step} of 5. Room choices are based on current availability and still need admin confirmation.
+        Step {step} of 5. This application is saved to the HM Dormitory database so every administrator can review it.
       </p>
 
       {step === 1 ? (
