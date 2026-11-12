@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import { SiteLogo } from '@/components/BrandMark'
+import { useRegistrationModal } from '@/contexts/RegistrationModalContext'
 import { useSite } from '@/contexts/SiteContext'
 import { scrollToSection } from '@/utils/scroll'
 
@@ -19,11 +20,19 @@ const watchedIds = ['top', 'rooms', 'amenities', 'rates', 'faq', 'house-rules', 
 
 export function Navbar() {
   const { site } = useSite()
+  const { openRegister } = useRegistrationModal()
+  const location = useLocation()
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const activeId = useActiveSection()
+  const onHome = location.pathname === '/'
 
   function goTo(id: string) {
     setOpen(false)
+    if (!onHome) {
+      navigate(id === 'top' ? '/' : `/#${id}`)
+      return
+    }
     if (id === 'top') {
       window.history.replaceState(null, '', '/')
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -69,6 +78,16 @@ export function Navbar() {
               </button>
             )
           })}
+          <button
+            type="button"
+            onClick={openRegister}
+            className="text-[13px] tracking-[0.12em] uppercase text-ink"
+          >
+            Register
+          </button>
+          <Link to="/login" className="text-[13px] tracking-[0.12em] uppercase text-muted hover:text-ink">
+            Sign in
+          </Link>
         </nav>
 
         <button
@@ -98,6 +117,19 @@ export function Navbar() {
                 {link.label}
               </button>
             ))}
+            <button
+              type="button"
+              className="border-b border-line px-1 py-3 text-left text-base"
+              onClick={() => {
+                setOpen(false)
+                openRegister()
+              }}
+            >
+              Register
+            </button>
+            <Link to="/login" className="px-1 py-3 text-left text-base" onClick={() => setOpen(false)}>
+              Sign in
+            </Link>
           </div>
         </nav>
       ) : null}

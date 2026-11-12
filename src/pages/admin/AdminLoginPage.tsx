@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -10,15 +10,17 @@ import { useSite } from '@/contexts/SiteContext'
 
 export default function AdminLoginPage() {
   const { site, loading: siteLoading, error: siteError } = useSite()
-  const { signIn, loading, isSiteAdmin, authError, clearAuthError } = useAuth()
+  const { signIn, loading, isSiteAdmin, access, authError, clearAuthError } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-
   if (!siteLoading && isSiteAdmin) {
     return <Navigate to="/admin/dashboard" replace />
   }
+  if (access === 'caretaker') return <Navigate to="/caretaker" replace />
+  if (access === 'boarder') return <Navigate to="/boarder" replace />
+  if (access === 'pending_boarder') return <Navigate to="/boarder/pending" replace />
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -80,6 +82,12 @@ export default function AdminLoginPage() {
             {submitting || loading ? <Spinner /> : null}
             Sign In
           </Button>
+          <p className="text-center text-sm text-muted">
+            Boarders and caretakers:{' '}
+            <Link to="/login" className="underline decoration-gold underline-offset-4">
+              sign in here
+            </Link>
+          </p>
         </form>
       </div>
     </div>

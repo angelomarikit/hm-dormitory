@@ -1,10 +1,12 @@
 import { Facebook, Mail, MessageCircle, Phone } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { SampleLabel } from '@/components/public/SampleLabel'
+import { useRegistrationModal } from '@/contexts/RegistrationModalContext'
 import { isFilled } from '@/utils/cn'
 import type { Site } from '@/types/database'
 
 export function ContactSection({ site, isSample = false }: { site: Site; isSample?: boolean }) {
+  const { openRegister } = useRegistrationModal()
   return (
     <section id="contact" className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
       <p className="text-xs tracking-[0.22em] text-gold uppercase">Inquire</p>
@@ -52,11 +54,9 @@ export function ContactSection({ site, isSample = false }: { site: Site; isSampl
         ) : null}
       </div>
 
-      {isFilled(site.registration_url) ? (
-        <a href={site.registration_url} target="_blank" rel="noreferrer" className="mt-6 inline-block">
-          <Button>Open registration form</Button>
-        </a>
-      ) : null}
+      <Button className="mt-6" onClick={openRegister}>
+        Register to stay
+      </Button>
     </section>
   )
 }

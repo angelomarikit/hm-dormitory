@@ -9,17 +9,30 @@ import {
 } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
-import { fetchSiteMembership, signInWithPassword, signOut as signOutRequest } from '@/services/authService'
+import {
+  fetchBoarderProfile,
+  fetchSiteMembership,
+  isCaretakerRole,
+  isCmsRole,
+  signInWithPassword,
+  signOut as signOutRequest,
+} from '@/services/authService'
 import { useSite } from '@/contexts/SiteContext'
 import type { SiteMember, SiteRole } from '@/types/database'
+import type { AccessKind, BoarderProfile } from '@/types/ops'
 
 interface AuthContextValue {
   user: User | null
   session: Session | null
   loading: boolean
   membership: SiteMember | null
+  boarderProfile: BoarderProfile | null
   role: SiteRole | null
+  access: AccessKind
   isSiteAdmin: boolean
+  isCms: boolean
+  isCaretaker: boolean
+  isBoarder: boolean
   authError: string | null
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
@@ -33,29 +46,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [membership, setMembership] = useState<SiteMember | null>(null)
+  const [boarderProfile, setBoarderProfile] = useState<BoarderProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [authError, setAuthError] = useState<string | null>(null)
 
-  const resolveMembership = useCallback(
+  const resolveAccess = useCallback(
     async (nextUser: User | null) => {
       if (!nextUser || !siteId) {
         setMembership(null)
-        return null
+        setBoarderProfile(null)
+        return
       }
 
       const nextMembership = await fetchSiteMembership(nextUser.id, siteId)
-      if (!nextMembership) {
-        await signOutRequest()
-        setMembership(null)
-        setSession(null)
-        setUser(null)
-        setAuthError('This account is not assigned to this website.')
-        return null
+      setMembership(nextMembership)
+      if (nextMembership) {
+        setBoarderProfile(null)
+        setAuthError(null)
+        return
       }
 
-      setMembership(nextMembership)
+      const profile = await fetchBoarderProfile(nextUser.id, siteId)
+      setBoarderProfile(profile)
       setAuthError(null)
-      return nextMembership
     },
     [siteId],
   )
@@ -74,11 +87,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data.session?.user ?? null)
 
       try {
-        await resolveMembership(data.session?.user ?? null)
+        await resolveAccess(data.session?.user ?? null)
       } catch (error) {
         if (!cancelled) {
           setAuthError(error instanceof Error ? error.message : 'Unable to verify access.')
           setMembership(null)
+          setBoarderProfile(null)
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -94,10 +108,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.setTimeout(() => {
         void (async () => {
           try {
-            await resolveMembership(nextSession?.user ?? null)
+            await resolveAccess(nextSession?.user ?? null)
           } catch (error) {
             setAuthError(error instanceof Error ? error.message : 'Unable to verify access.')
             setMembership(null)
+            setBoarderProfile(null)
           } finally {
             if (event === 'SIGNED_OUT') setLoading(false)
           }
@@ -109,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true
       listener.subscription.unsubscribe()
     }
-  }, [resolveMembership, siteLoading])
+  }, [resolveAccess, siteLoading])
 
   const signIn = useCallback(async (email: string, password: string) => {
     setAuthError(null)
@@ -126,8 +141,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     await signOutRequest()
     setMembership(null)
+    setBoarderProfile(null)
     setAuthError(null)
   }, [])
+
+  const role = membership?.role ?? null
+  const access: AccessKind = !user
+    ? 'anonymous'
+    : isCmsRole(role)
+      ? 'cms'
+      : isCaretakerRole(role)
+        ? 'caretaker'
+        : boarderProfile?.status === 'active'
+          ? 'boarder'
+          : boarderProfile?.status === 'pending'
+            ? 'pending_boarder'
+            : 'unassigned'
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -135,14 +164,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       loading: loading || siteLoading,
       membership,
-      role: membership?.role ?? null,
-      isSiteAdmin: Boolean(membership),
+      boarderProfile,
+      role,
+      access,
+      isSiteAdmin: access === 'cms',
+      isCms: access === 'cms',
+      isCaretaker: access === 'caretaker',
+      isBoarder: access === 'boarder',
       authError,
       signIn,
       signOut,
       clearAuthError: () => setAuthError(null),
     }),
-    [user, session, loading, siteLoading, membership, authError, signIn, signOut],
+    [
+      user,
+      session,
+      loading,
+      siteLoading,
+      membership,
+      boarderProfile,
+      role,
+      access,
+      authError,
+      signIn,
+      signOut,
+    ],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

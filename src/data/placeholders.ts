@@ -50,7 +50,7 @@ export function mergeSiteWithPlaceholders(site: Site): Site {
     email: site.email?.trim() || 'hello@example.com',
     facebook_url: site.facebook_url?.trim() || 'https://facebook.com',
     messenger_url: site.messenger_url?.trim() || 'https://m.me/example',
-    registration_url: site.registration_url?.trim() || 'https://www.google.com/forms/about/',
+    registration_url: site.registration_url?.trim() || null,
     google_maps_embed_url:
       site.google_maps_embed_url?.trim() ||
       'https://maps.google.com/maps?q=Manila+Philippines&z=14&output=embed',
@@ -317,7 +317,7 @@ export function placeholderFaqs(siteId: string): Faq[] {
       id: 'sample-faq-4',
       site_id: siteId,
       question: 'How do I register?',
-      answer: 'Sample answer. Use the Registration Form button once the Google Form link is added in Settings.',
+      answer: 'Sample answer. Use the Register button on this website to submit an application.',
       sort_order: 4,
       is_active: true,
       created_at: now,
@@ -391,8 +391,7 @@ export function getSiteSampleFlags(site: Site) {
       !isFilled(site.phone) ||
       !isFilled(site.email) ||
       !isFilled(site.facebook_url) ||
-      !isFilled(site.messenger_url) ||
-      !isFilled(site.registration_url),
+      !isFilled(site.messenger_url),
   }
 }
 

@@ -1,11 +1,13 @@
 import { Facebook, Mail, MapPin, Phone } from 'lucide-react'
 import { SiteLogo } from '@/components/BrandMark'
+import { useRegistrationModal } from '@/contexts/RegistrationModalContext'
 import { useSite } from '@/contexts/SiteContext'
 import { isFilled } from '@/utils/cn'
 import { mergeSiteWithPlaceholders } from '@/data/placeholders'
 
 export function Footer() {
   const { site } = useSite()
+  const { openRegister } = useRegistrationModal()
   if (!site) return null
   const displaySite = mergeSiteWithPlaceholders(site)
 
@@ -30,6 +32,10 @@ export function Footer() {
             <a href="/#rooms" className="text-muted hover:text-ink">Rooms</a>
             <a href="/#house-rules" className="text-muted hover:text-ink">House Rules</a>
             <a href="/#contact" className="text-muted hover:text-ink">Contact</a>
+            <button type="button" onClick={openRegister} className="text-left text-muted hover:text-ink">
+              Register
+            </button>
+            <a href="/login" className="text-muted hover:text-ink">Sign in</a>
           </div>
         </div>
 

@@ -57,6 +57,8 @@ export async function createTenant(siteId: string, input: TenantInput): Promise<
     .insert({
       site_id: siteId,
       room_id: input.room_id,
+      bed_id: input.bed_id || null,
+      email: input.email?.trim() || null,
       full_name: fullName,
       phone: input.phone?.trim() || null,
       notes: input.notes?.trim() || null,
@@ -67,7 +69,17 @@ export async function createTenant(siteId: string, input: TenantInput): Promise<
     .select('*')
     .single()
 
-  return throwIfError(data as Tenant | null, error, mapTenantError(error?.message, 'Unable to add tenant.'))
+  const tenant = throwIfError(data as Tenant | null, error, mapTenantError(error?.message, 'Unable to add tenant.'))
+  if (input.bed_id) {
+    await supabase.from('room_assignment_history').insert({
+      site_id: siteId,
+      tenant_id: tenant.id,
+      room_id: input.room_id,
+      bed_id: input.bed_id,
+      started_on: input.started_on,
+    })
+  }
+  return tenant
 }
 
 export async function updateTenant(
@@ -84,6 +96,8 @@ export async function updateTenant(
     .from('tenants')
     .update({
       room_id: input.room_id,
+      bed_id: input.bed_id || null,
+      email: input.email?.trim() || null,
       full_name: fullName,
       phone: input.phone?.trim() || null,
       notes: input.notes?.trim() || null,
@@ -94,7 +108,17 @@ export async function updateTenant(
     .select('*')
     .single()
 
-  return throwIfError(data as Tenant | null, error, mapTenantError(error?.message, 'Unable to update tenant.'))
+  const tenant = throwIfError(data as Tenant | null, error, mapTenantError(error?.message, 'Unable to update tenant.'))
+  if (input.bed_id) {
+    await supabase.from('room_assignment_history').insert({
+      site_id: siteId,
+      tenant_id: tenant.id,
+      room_id: input.room_id,
+      bed_id: input.bed_id,
+      started_on: input.started_on,
+    })
+  }
+  return tenant
 }
 
 export async function markTenantLeft(
@@ -116,6 +140,21 @@ export async function markTenantLeft(
     .single()
 
   return throwIfError(data as Tenant | null, error, 'Unable to mark this tenant as left.')
+}
+
+export async function fetchTenantById(siteId: string, id: string): Promise<TenantWithRoom | null> {
+  const { data, error } = await supabase
+    .from('tenants')
+    .select(TENANT_SELECT)
+    .eq('site_id', siteId)
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error) {
+    throw new Error(mapTenantError(error.message, 'Unable to load boarder record.'))
+  }
+
+  return data as TenantWithRoom | null
 }
 
 export async function deleteTenant(siteId: string, id: string): Promise<void> {

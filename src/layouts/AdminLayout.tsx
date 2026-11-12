@@ -1,13 +1,20 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
+  Activity,
+  Banknote,
   Bell,
   Building2,
   CircleHelp,
+  ClipboardList,
+  FileText,
   LayoutDashboard,
   LogOut,
   Menu,
+  MessageSquare,
+  Megaphone,
   ScrollText,
+  Wrench,
   Settings,
   Sparkles,
   Users,
@@ -21,9 +28,17 @@ import { KeepAliveOutlet } from '@/components/KeepAliveOutlet'
 
 const navItems = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/admin/tenants', label: 'Tenants', icon: Users },
+  { to: '/admin/registrations', label: 'Registrations', icon: ClipboardList },
+  { to: '/admin/tenants', label: 'Boarders', icon: Users },
+  { to: '/admin/rooms', label: 'Rooms & Beds', icon: Building2 },
+  { to: '/admin/billing', label: 'Billing', icon: FileText },
+  { to: '/admin/payments', label: 'Payments', icon: Banknote },
+  { to: '/admin/notices', label: 'Notices', icon: Megaphone },
+  { to: '/admin/messages', label: 'Messages', icon: MessageSquare },
+  { to: '/admin/maintenance', label: 'Maintenance', icon: Wrench },
+  { to: '/admin/reports', label: 'Reports', icon: Wallet },
+  { to: '/admin/activity', label: 'Activity Logs', icon: Activity },
   { to: '/admin/announcements', label: 'Announcements', icon: Bell },
-  { to: '/admin/rooms', label: 'Rooms', icon: Building2 },
   { to: '/admin/amenities', label: 'Amenities', icon: Sparkles },
   { to: '/admin/rates', label: 'Rates', icon: Wallet },
   { to: '/admin/faqs', label: 'FAQs', icon: CircleHelp },
@@ -39,7 +54,7 @@ export function AdminLayout() {
 
   async function handleSignOut() {
     await signOut()
-    navigate('/admin')
+    navigate('/login')
   }
 
   const nav = (

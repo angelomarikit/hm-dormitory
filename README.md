@@ -7,7 +7,7 @@ Multi-tenant landing page and admin system. HM Dormitory is the first client. Th
 1. Copy environment variables:
 
 ```bash
-cp .env.example .env.local
+cp .env.example .env.local asd asd
 ```
 
 On Windows PowerShell:

@@ -1,6 +1,7 @@
-import { ArrowUpRight, BedDouble, Compass, ClipboardList, DoorOpen } from 'lucide-react'
+import { BedDouble, Compass, ClipboardList, DoorOpen } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { SampleLabel } from '@/components/public/SampleLabel'
+import { useRegistrationModal } from '@/contexts/RegistrationModalContext'
 import { isFilled } from '@/utils/cn'
 import type { Site } from '@/types/database'
 
@@ -13,6 +14,7 @@ interface HeroProps {
 }
 
 export function Hero({ site, availableSpaces, isSample = false, onCheckAvailability, onViewRooms }: HeroProps) {
+  const { openRegister } = useRegistrationModal()
   const image = site.hero_image_url || site.building_image_url
 
   return (
@@ -53,14 +55,9 @@ export function Hero({ site, availableSpaces, isSample = false, onCheckAvailabil
               <DoorOpen className="h-4 w-4" />
               View Rooms
             </Button>
-            {isFilled(site.registration_url) ? (
-              <a href={site.registration_url} target="_blank" rel="noreferrer" className="contents">
-                <Button variant="outline" className="w-full">
-                  Registration Form
-                  <ArrowUpRight className="h-4 w-4" />
-                </Button>
-              </a>
-            ) : null}
+            <Button variant="outline" className="w-full" onClick={openRegister}>
+              Register
+            </Button>
             {isFilled(site.google_maps_directions_url) ? (
               <a href={site.google_maps_directions_url} target="_blank" rel="noreferrer" className="contents">
                 <Button variant="outline" className="w-full">

@@ -31,7 +31,7 @@ export function Modal({ open, title, onClose, children, wide = false }: ModalPro
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-6">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-6">
       <button
         type="button"
         aria-label="Close dialog"

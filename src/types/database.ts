@@ -1,4 +1,4 @@
-export type SiteRole = 'owner' | 'admin' | 'editor'
+export type SiteRole = 'owner' | 'admin' | 'editor' | 'caretaker'
 
 export interface Site {
   id: string
@@ -100,6 +100,7 @@ export interface Room {
   description: string | null
   capacity: number
   occupied_spaces: number
+  monthly_rent_centavos?: number
   sort_order: number
   is_active: boolean
   room_type: 'big' | 'small' | null
@@ -219,6 +220,9 @@ export interface Tenant {
   id: string
   site_id: string
   room_id: string
+  bed_id: string | null
+  user_id: string | null
+  email: string | null
   full_name: string
   phone: string | null
   notes: string | null
@@ -244,6 +248,8 @@ export interface TenantWithRoom extends Tenant {
 
 export type TenantInput = {
   room_id: string
+  bed_id?: string | null
+  email?: string | null
   full_name: string
   phone?: string | null
   notes?: string | null

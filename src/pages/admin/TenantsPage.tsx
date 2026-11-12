@@ -18,6 +18,7 @@ import { useModalDraft } from '@/hooks/useSessionDraft'
 import { toUserMessage } from '@/lib/errors'
 import { fetchAllFloors } from '@/services/floorService'
 import { ensureStandardLayout } from '@/services/layoutService'
+import { fetchBeds } from '@/services/bedService'
 import { fetchAllRooms } from '@/services/roomService'
 import {
   createTenant,
@@ -27,8 +28,10 @@ import {
   updateTenant,
 } from '@/services/tenantService'
 import { formatDate, todayISO } from '@/utils/format'
+import { formatPeso } from '@/utils/money'
 import { getAvailableSpaces, getRoomStatus, getRoomStatusLabel } from '@/utils/roomAvailability'
 import type { Floor, RoomWithRelations, TenantInput, TenantWithRoom } from '@/types/database'
+import type { Bed } from '@/types/ops'
 
 type StatusFilter = 'active' | 'left' | 'all'
 type FloorFilter = 'all' | number
@@ -38,6 +41,8 @@ const emptyForm: TenantInput = {
   phone: '',
   notes: '',
   room_id: '',
+  bed_id: '',
+  email: '',
   started_on: todayISO(),
 }
 
@@ -49,6 +54,7 @@ export default function TenantsPage() {
   const [floors, setFloors] = useState<Floor[]>([])
   const [rooms, setRooms] = useState<RoomWithRelations[]>([])
   const [tenants, setTenants] = useState<TenantWithRoom[]>([])
+  const [beds, setBeds] = useState<Bed[]>([])
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active')
   const [floorFilter, setFloorFilter] = useState<FloorFilter>('all')
@@ -75,6 +81,11 @@ export default function TenantsPage() {
       setFloors(nextFloors.filter((floor) => floor.is_active))
       setRooms(nextRooms.filter((room) => room.is_active))
       setTenants(nextTenants)
+      try {
+        setBeds(await fetchBeds(siteId))
+      } catch {
+        setBeds([])
+      }
     } catch (error) {
       toast.error(toUserMessage(error, 'Unable to load tenants.'))
     } finally {
@@ -137,6 +148,7 @@ export default function TenantsPage() {
       ...emptyForm,
       started_on: todayISO(),
       room_id: roomId ?? '',
+      bed_id: '',
     })
     setOpen(true)
   }
@@ -149,6 +161,8 @@ export default function TenantsPage() {
       phone: tenant.phone ?? '',
       notes: tenant.notes ?? '',
       room_id: tenant.room_id,
+      bed_id: tenant.bed_id ?? '',
+      email: tenant.email ?? '',
       started_on: tenant.started_on,
     })
     setOpen(true)
@@ -188,12 +202,12 @@ export default function TenantsPage() {
   return (
     <div>
       <AdminPageHeader
-        title="Tenants"
-        description="Assign boarders to a room. Occupancy on Rooms and the website updates from who is currently staying."
+        title="Boarders"
+        description="Assign each boarder to a specific bed. Billing starts only after that assignment — rooms themselves are not billed."
         action={
           <Button onClick={() => openCreate()}>
             <Plus className="h-4 w-4" />
-            Add tenant
+            Add boarder
           </Button>
         }
       />
@@ -296,6 +310,7 @@ export default function TenantsPage() {
                             <thead className="text-xs tracking-[0.12em] text-muted uppercase">
                               <tr>
                                 <th className="px-4 py-2 font-medium">Name</th>
+                                <th className="px-4 py-2 font-medium">Bed</th>
                                 <th className="px-4 py-2 font-medium">Started</th>
                                 <th className="px-4 py-2 font-medium">Status</th>
                                 <th className="px-4 py-2 font-medium">Phone</th>
@@ -306,6 +321,9 @@ export default function TenantsPage() {
                               {roomTenants.map((tenant) => (
                                 <tr key={tenant.id} className="border-t border-line/70">
                                   <td className="px-4 py-3 font-medium">{tenant.full_name}</td>
+                                  <td className="px-4 py-3 text-muted">
+                                    {beds.find((bed) => bed.id === tenant.bed_id)?.bed_code ?? '—'}
+                                  </td>
                                   <td className="px-4 py-3">{formatDate(tenant.started_on)}</td>
                                   <td className="px-4 py-3">
                                     {tenant.is_active ? (
@@ -359,12 +377,12 @@ export default function TenantsPage() {
         <Link to="/admin/rooms" className="text-ink underline decoration-gold underline-offset-4">
           Rooms
         </Link>{' '}
-        page. Occupancy there follows these assignments.
+        page. Set rent per bed there. Occupancy follows these assignments; invoices follow occupied beds.
       </p>
 
       <Modal
         open={open}
-        title={editingId ? 'Edit tenant' : 'Add tenant'}
+        title={editingId ? 'Edit boarder' : 'Add boarder'}
         onClose={() => setOpen(false)}
       >
         <div className="grid gap-4">
@@ -378,7 +396,7 @@ export default function TenantsPage() {
             label="Room"
             value={form.room_id}
             error={errors.room_id}
-            onChange={(event) => setForm((current) => ({ ...current, room_id: event.target.value }))}
+            onChange={(event) => setForm((current) => ({ ...current, room_id: event.target.value, bed_id: '' }))}
           >
             <option value="">Select a room</option>
             {floors.map((floor) => (
@@ -398,6 +416,39 @@ export default function TenantsPage() {
               </optgroup>
             ))}
           </Select>
+          {beds.some((bed) => bed.room_id === form.room_id) ? (
+            <Select
+              label="Bed"
+              value={form.bed_id ?? ''}
+              onChange={(event) => setForm((current) => ({ ...current, bed_id: event.target.value }))}
+            >
+              <option value="">No bed (not billed)</option>
+              {beds
+                .filter((bed) => bed.room_id === form.room_id)
+                .map((bed) => {
+                  const taken = tenants.some(
+                    (tenant) =>
+                      tenant.is_active &&
+                      tenant.bed_id === bed.id &&
+                      tenant.id !== editingId,
+                  )
+                  const rent = bed.monthly_rent_centavos ?? 0
+                  return (
+                    <option key={bed.id} value={bed.id} disabled={taken}>
+                      {bed.bed_code}
+                      {taken ? ' · occupied' : ' · billable'}
+                      {rent ? ` · ${formatPeso(rent)}` : ''}
+                    </option>
+                  )
+                })}
+            </Select>
+          ) : null}
+          <Input
+            label="Email (optional)"
+            type="email"
+            value={form.email ?? ''}
+            onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+          />
           <Input
             label="Date started boarding"
             type="date"
@@ -416,7 +467,7 @@ export default function TenantsPage() {
             onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
           />
           <Button className="w-full" disabled={saving} onClick={() => void save()}>
-            {saving ? 'Saving…' : 'Save tenant'}
+            {saving ? 'Saving…' : 'Save boarder'}
           </Button>
         </div>
       </Modal>

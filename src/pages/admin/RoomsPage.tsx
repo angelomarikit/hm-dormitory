@@ -5,6 +5,7 @@ import { AdminPageHeader } from '@/components/admin/AdminPageHeader'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { ImageUpload } from '@/components/ui/ImageUpload'
+import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Textarea } from '@/components/ui/Textarea'
@@ -20,10 +21,14 @@ import {
   fetchAllRooms,
   updateRoomDetails,
 } from '@/services/roomService'
+import { fetchBeds } from '@/services/bedService'
+import { updateRoomRent } from '@/services/billingService'
 import { fetchActiveTenants } from '@/services/tenantService'
 import { deleteSiteAssetByUrl, uploadSiteAsset } from '@/services/storageService'
 import { getAvailableSpaces, getRoomStatus, getRoomStatusLabel } from '@/utils/roomAvailability'
+import { centavosToPesos, formatPeso, parsePesoInput } from '@/utils/money'
 import type { RoomWithRelations, TenantWithRoom } from '@/types/database'
+import type { Bed } from '@/types/ops'
 
 export default function RoomsPage() {
   const { siteId } = useSite()
@@ -32,8 +37,10 @@ export default function RoomsPage() {
   const [floors, setFloors] = useState<Array<{ id: string; floor_number: number; name: string; description: string | null }>>([])
   const [rooms, setRooms] = useState<RoomWithRelations[]>([])
   const [tenants, setTenants] = useState<TenantWithRoom[]>([])
+  const [beds, setBeds] = useState<Bed[]>([])
   const [editingRoom, setEditingRoom] = useState<RoomWithRelations | null>(null)
   const [description, setDescription] = useState('')
+  const [rentPesos, setRentPesos] = useState('')
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
 
@@ -52,6 +59,11 @@ export default function RoomsPage() {
         setTenants(await fetchActiveTenants(siteId))
       } catch {
         setTenants([])
+      }
+      try {
+        setBeds(await fetchBeds(siteId))
+      } catch {
+        setBeds([])
       }
     } catch (error) {
       toast.error(toUserMessage(error, 'Unable to load rooms.'))
@@ -79,6 +91,9 @@ export default function RoomsPage() {
         description,
         room_name: editingRoom.room_name,
       })
+      if (rentPesos.trim()) {
+        await updateRoomRent(siteId, editingRoom.id, parsePesoInput(rentPesos))
+      }
       toast.success('Room details saved.')
       await load()
     } catch (error) {
@@ -134,8 +149,8 @@ export default function RoomsPage() {
   return (
     <div>
       <AdminPageHeader
-        title="Rooms"
-        description="Standard rooms by floor. Occupancy comes from who you assigned on the Tenants page."
+        title="Rooms & beds"
+        description="Each room can hold many beds (usually 10). Set rent per bed. A boarder is billed only after they are assigned to a specific bed."
         action={
           <Link
             to="/admin/tenants"
@@ -173,6 +188,12 @@ export default function RoomsPage() {
                     const available = getAvailableSpaces(roomSpec.capacity, occupiedSpaces)
                     const status = getRoomStatus(available)
                     const assigned = room ? tenantsForRoom(room.id) : []
+                    const roomBeds = room ? beds.filter((bed) => bed.room_id === room.id) : []
+                    const billedCount = assigned.filter((tenant) => tenant.bed_id).length
+                    const rentCentavos =
+                      roomBeds.find((bed) => (bed.monthly_rent_centavos ?? 0) > 0)?.monthly_rent_centavos ??
+                      room?.monthly_rent_centavos ??
+                      0
                     return (
                       <article key={roomSpec.roomNumber} className="rounded-xl border border-line bg-white p-5">
                         <div className="flex items-start justify-between gap-3">
@@ -195,13 +216,28 @@ export default function RoomsPage() {
                         <p className="mt-2 text-sm">
                           {occupiedSpaces} occupied · {available} available
                         </p>
+                        {rentCentavos ? (
+                          <p className="mt-1 text-sm text-muted">{formatPeso(rentCentavos)} per occupied bed</p>
+                        ) : null}
+                        {room ? (
+                          <p className="mt-2 text-xs text-muted">
+                            {roomBeds.length
+                              ? `${billedCount} of ${roomBeds.length} beds billed`
+                              : 'Run ops SQL to seed beds.'}
+                          </p>
+                        ) : null}
                         <div className="mt-4">
                           {assigned.length === 0 ? (
                             <p className="text-sm text-muted">No boarders assigned yet.</p>
                           ) : (
                             <ul className="space-y-1 text-sm">
                               {assigned.map((tenant) => (
-                                <li key={tenant.id}>{tenant.full_name}</li>
+                                <li key={tenant.id}>
+                                  {tenant.full_name}
+                                  {tenant.bed_id
+                                    ? ` · ${beds.find((bed) => bed.id === tenant.bed_id)?.bed_code ?? ''}`
+                                    : ''}
+                                </li>
                               ))}
                             </ul>
                           )}
@@ -220,6 +256,11 @@ export default function RoomsPage() {
                                 onClick={() => {
                                   setEditingRoom(room)
                                   setDescription(room.description ?? '')
+                                  const bedRent = beds.find(
+                                    (bed) => bed.room_id === room.id && (bed.monthly_rent_centavos ?? 0) > 0,
+                                  )?.monthly_rent_centavos
+                                  const cents = room.monthly_rent_centavos || bedRent || 0
+                                  setRentPesos(cents ? String(centavosToPesos(cents)) : '')
                                 }}
                               >
                                 Photos & notes
@@ -249,9 +290,31 @@ export default function RoomsPage() {
         {editingRoom ? (
           <div className="grid gap-4">
             <p className="text-sm text-muted">
-              {roomTypeLabel(editingRoom.room_type, editingRoom.capacity)}. Occupancy is set by tenant
-              assignments, not by a counter.
+              {roomTypeLabel(editingRoom.room_type, editingRoom.capacity)}. Each bed is billed separately.
+              Only a boarder assigned to a bed gets an invoice. Empty beds are not billed.
             </p>
+            <Input
+              label="Rent per bed (PHP)"
+              value={rentPesos}
+              onChange={(event) => setRentPesos(event.target.value)}
+            />
+            <p className="text-xs text-muted">
+              This amount is saved on every bed in this room. Example: 10 occupied beds × ₱3,500 = 10
+              separate bills.
+            </p>
+            <ul className="space-y-1 text-sm">
+              {beds
+                .filter((bed) => bed.room_id === editingRoom.id)
+                .map((bed) => {
+                  const occupant = tenants.find((tenant) => tenant.bed_id === bed.id)
+                  return (
+                    <li key={bed.id} className="flex justify-between gap-3 text-muted">
+                      <span>{bed.bed_code}</span>
+                      <span>{occupant ? `${occupant.full_name} · billed` : 'Open · not billed'}</span>
+                    </li>
+                  )
+                })}
+            </ul>
             <Textarea
               label="Description shown on the website"
               value={description}

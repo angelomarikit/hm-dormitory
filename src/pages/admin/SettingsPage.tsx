@@ -26,7 +26,6 @@ function formFromSite(site: Site | null): SiteUpdate {
     email: site?.email ?? '',
     facebook_url: site?.facebook_url ?? '',
     messenger_url: site?.messenger_url ?? '',
-    registration_url: site?.registration_url ?? '',
     google_maps_embed_url: site?.google_maps_embed_url ?? '',
     google_maps_directions_url: site?.google_maps_directions_url ?? '',
   }
@@ -87,7 +86,7 @@ export default function SettingsPage() {
     <div className="max-w-3xl">
       <AdminPageHeader
         title="Settings"
-        description="Update the public website, including the Google Form used for boarder registration."
+        description="Update the public website copy, photos, and contact details."
       />
       <div className="mt-6 space-y-8">
         <SettingsGroup title="Website copy">
@@ -188,28 +187,6 @@ export default function SettingsPage() {
             value={form.messenger_url ?? ''}
             onChange={(event) => updateField('messenger_url', event.target.value)}
           />
-        </SettingsGroup>
-
-        <SettingsGroup title="Registration">
-          <Input
-            label="Google Form registration URL"
-            value={form.registration_url ?? ''}
-            placeholder="https://docs.google.com/forms/d/e/..."
-            onChange={(event) => updateField('registration_url', event.target.value)}
-          />
-          <p className="text-xs text-muted">
-            Paste your Google Form link here. The “Registration Form” button on the website will open this form in a new tab. Leave it blank to hide the button.
-          </p>
-          {form.registration_url ? (
-            <a
-              href={form.registration_url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-block text-sm text-gold-dark hover:underline"
-            >
-              Open the current form
-            </a>
-          ) : null}
         </SettingsGroup>
 
         <Button disabled={saving} onClick={() => void save()}>

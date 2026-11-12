@@ -13,8 +13,12 @@ import { fetchAllAnnouncements } from '@/services/announcementService'
 import { fetchAllFloors } from '@/services/floorService'
 import { ensureStandardLayout } from '@/services/layoutService'
 import { buildAvailabilitySummary, fetchAllRooms } from '@/services/roomService'
+import { fetchBills } from '@/services/billingService'
+import { fetchPayments } from '@/services/paymentService'
+import { fetchRegistrations } from '@/services/registrationService'
 import { fetchActiveTenants } from '@/services/tenantService'
 import { formatDate } from '@/utils/format'
+import { formatPeso } from '@/utils/money'
 import { getAvailableSpaces, getRoomStatus, getRoomStatusLabel } from '@/utils/roomAvailability'
 import type { AvailabilitySummary, Floor, RoomWithRelations, TenantWithRoom } from '@/types/database'
 
@@ -30,6 +34,9 @@ export default function DashboardPage() {
   const [tenants, setTenants] = useState<TenantWithRoom[]>([])
   const [stats, setStats] = useState<AvailabilitySummary | null>(null)
   const [floorFilter, setFloorFilter] = useState<FloorFilter>('all')
+  const [pendingApps, setPendingApps] = useState(0)
+  const [collected, setCollected] = useState(0)
+  const [outstanding, setOutstanding] = useState(0)
 
   useEffect(() => {
     if (!siteId) return
@@ -54,6 +61,25 @@ export default function DashboardPage() {
         setTenants(nextTenants)
         setStats(buildAvailabilitySummary(activeRooms, activeFloors))
         setAnnouncementCount(announcements.length)
+        try {
+          const [bills, payments, registrations] = await Promise.all([
+            fetchBills(currentSiteId),
+            fetchPayments(currentSiteId),
+            fetchRegistrations(currentSiteId),
+          ])
+          if (cancelled) return
+          setPendingApps(registrations.filter((item) => item.status === 'pending' || item.status === 'under_review').length)
+          setCollected(
+            payments.filter((item) => item.status === 'confirmed').reduce((sum, item) => sum + item.amount_centavos, 0),
+          )
+          setOutstanding(
+            bills.reduce((sum, bill) => sum + Math.max(0, bill.total_centavos - bill.paid_centavos), 0),
+          )
+        } catch {
+          setPendingApps(0)
+          setCollected(0)
+          setOutstanding(0)
+        }
       } catch (error) {
         if (!cancelled) {
           setStats(buildAvailabilitySummary([], []))
@@ -104,7 +130,7 @@ export default function DashboardPage() {
     <div>
       <AdminPageHeader
         title="Dashboard"
-        description="Boarders, floors, and rooms stay in sync with assignments on the Tenants page."
+        description="Occupancy follows boarder assignments. Money totals use confirmed payments only."
       />
       {loading || !stats ? (
         <div className="mt-6 space-y-3">
@@ -122,6 +148,10 @@ export default function DashboardPage() {
             <StatCard label="Beds occupied" value={stats.occupiedSpaces} />
             <StatCard label="Beds available" value={stats.availableSpaces} />
             <StatCard label="Total bed capacity" value={stats.totalCapacity} />
+            <StatCard label="Pending applications" value={pendingApps} />
+            <StatCard label="Collected (confirmed)" value={formatPeso(collected)} />
+            <StatCard label="Outstanding bills" value={formatPeso(outstanding)} />
+            <StatCard label="Website announcements" value={announcementCount} />
           </div>
 
           <section className="mt-8 rounded-xl border border-line bg-white">
