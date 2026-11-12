@@ -159,7 +159,11 @@ export function RegistrationForm({ onClose }: { onClose?: () => void }) {
             ))}
           </Select>
           <Input label="Preferred move-in date" type="date" value={form.preferred_move_in} onChange={(e) => set('preferred_move_in', e.target.value)} />
-          <Input label="Expected length of stay" value={form.expected_stay} onChange={(e) => set('expected_stay', e.target.value)} />
+          <Select label="Expected length of stay" value={form.expected_stay} onChange={(e) => set('expected_stay', e.target.value)}>
+            <option value="">Select length of stay</option>
+            <option value="1 semester">1 semester</option>
+            <option value="2 semesters">2 semesters</option>
+          </Select>
           <Textarea label="Special requests" value={form.special_requests} onChange={(e) => set('special_requests', e.target.value)} />
           <p className="text-sm text-muted">Preferences are not a confirmed assignment.</p>
         </div>
@@ -180,6 +184,7 @@ export function RegistrationForm({ onClose }: { onClose?: () => void }) {
           <p><strong>Email:</strong> {form.email}</p>
           <p><strong>Mobile:</strong> {form.mobile}</p>
           <p><strong>Move-in:</strong> {form.preferred_move_in || '—'}</p>
+          <p><strong>Stay:</strong> {form.expected_stay || '—'}</p>
           <label className="mt-4 flex items-start gap-2">
             <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
             <span>I agree to the house rules, terms, and privacy notice, and I confirm this information is true.</span>

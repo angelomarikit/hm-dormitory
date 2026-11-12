@@ -123,6 +123,7 @@ export default function RegistrationsPage() {
             <p>{open.home_address}</p>
             <p>
               {open.occupancy_type} {open.school_or_company ? `· ${open.school_or_company}` : ''}
+              {open.expected_stay ? ` · ${open.expected_stay}` : ''}
             </p>
             <Select label="Assign room" value={roomId} onChange={(e) => { setRoomId(e.target.value); setBedId(''); }}>
               <option value="">Select room</option>
