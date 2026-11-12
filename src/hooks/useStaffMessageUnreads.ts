@@ -1,15 +1,16 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSite } from '@/contexts/SiteContext'
 import { STAFF_UNREAD_EVENT, fetchUnreadBoarderCounts } from '@/services/commsService'
 
-export function useStaffMessageUnreads() {
+export function useStaffMessageUnreadsState() {
   const { siteId } = useSite()
   const { user, isCms, isCaretaker } = useAuth()
   const enabled = Boolean(siteId && user && (isCms || isCaretaker))
   const [total, setTotal] = useState(0)
   const [byConversation, setByConversation] = useState<Record<string, number>>({})
+  const refreshRef = useRef<() => Promise<void>>(async () => {})
 
   const refresh = useCallback(async () => {
     if (!enabled || !siteId || !user) {
@@ -26,6 +27,8 @@ export function useStaffMessageUnreads() {
     }
   }, [enabled, siteId, user])
 
+  refreshRef.current = refresh
+
   useEffect(() => {
     void refresh()
   }, [refresh])
@@ -33,11 +36,11 @@ export function useStaffMessageUnreads() {
   useEffect(() => {
     if (!enabled || !siteId) return
     const onRefresh = () => {
-      void refresh()
+      void refreshRef.current()
     }
     window.addEventListener(STAFF_UNREAD_EVENT, onRefresh)
     const channel = supabase
-      .channel(`staff-unread:${siteId}`)
+      .channel(`staff-unread:${siteId}:${crypto.randomUUID()}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `site_id=eq.${siteId}` },
@@ -48,7 +51,7 @@ export function useStaffMessageUnreads() {
       window.removeEventListener(STAFF_UNREAD_EVENT, onRefresh)
       void supabase.removeChannel(channel)
     }
-  }, [enabled, siteId, refresh])
+  }, [enabled, siteId])
 
   return { total, byConversation, refresh }
 }

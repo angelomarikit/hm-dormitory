@@ -27,7 +27,7 @@ import { useSite } from '@/contexts/SiteContext'
 import { Button } from '@/components/ui/Button'
 import { KeepAliveOutlet } from '@/components/KeepAliveOutlet'
 import { UnreadBadge } from '@/components/messages/UnreadBadge'
-import { useStaffMessageUnreads } from '@/hooks/useStaffMessageUnreads'
+import { useStaffMessageUnreads } from '@/contexts/StaffUnreadContext'
 
 const navItems = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },

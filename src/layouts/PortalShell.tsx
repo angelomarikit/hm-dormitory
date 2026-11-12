@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { UnreadBadge } from '@/components/messages/UnreadBadge'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSite } from '@/contexts/SiteContext'
-import { useStaffMessageUnreads } from '@/hooks/useStaffMessageUnreads'
+import { useStaffMessageUnreads } from '@/contexts/StaffUnreadContext'
 
 export interface PortalNavItem {
   to: string

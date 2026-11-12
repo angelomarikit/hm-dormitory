@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { Send } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { UnreadBadge } from '@/components/messages/UnreadBadge'
-import { useStaffMessageUnreads } from '@/hooks/useStaffMessageUnreads'
+import { useStaffMessageUnreads } from '@/contexts/StaffUnreadContext'
 import {
   fetchConversations,
   fetchMessages,
@@ -100,7 +100,7 @@ export function MessageCenter({
 
   useEffect(() => {
     const channel = supabase
-      .channel(`ops-messages:${siteId}`)
+      .channel(`ops-messages:${siteId}:${crypto.randomUUID()}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `site_id=eq.${siteId}` },
