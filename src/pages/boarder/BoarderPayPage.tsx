@@ -5,7 +5,8 @@ import { Select } from '@/components/ui/Select'
 import { useSite } from '@/contexts/SiteContext'
 import { useToast } from '@/contexts/ToastContext'
 import { useBoarderTenant } from '@/hooks/useBoarderTenant'
-import { fetchBillsForTenant } from '@/services/billingService'
+import { PaymentQrCard } from '@/components/payments/PaymentQrCard'
+import { fetchBillsForTenant, fetchBillingSettings, type BillingSettings } from '@/services/billingService'
 import { submitEwalletPayment } from '@/services/paymentService'
 import { formatPeso, parsePesoInput } from '@/utils/money'
 import { toUserMessage } from '@/lib/errors'
@@ -22,6 +23,12 @@ export default function BoarderPayPage() {
   const [reference, setReference] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
+  const [instructions, setInstructions] = useState<BillingSettings | null>(null)
+
+  useEffect(() => {
+    if (!siteId) return
+    void fetchBillingSettings(siteId).then(setInstructions).catch(() => setInstructions(null))
+  }, [siteId])
 
   useEffect(() => {
     if (!siteId || !tenant) return
@@ -40,7 +47,19 @@ export default function BoarderPayPage() {
   return (
     <div>
       <h1 className="font-display text-3xl">Pay a bill</h1>
-      <p className="mt-2 text-sm text-muted">Upload a GCash, Maya, or QR Ph receipt. It stays pending until an administrator confirms it.</p>
+      <p className="mt-2 text-sm text-muted">
+        Scan the dormitory QR or send to the account below, then upload your receipt. It stays pending until an administrator confirms it.
+      </p>
+      <div className="mt-6">
+        <PaymentQrCard
+          instructions={{
+            payment_qr_url: instructions?.payment_qr_url ?? null,
+            payment_account_name: instructions?.payment_account_name ?? null,
+            payment_account_number: instructions?.payment_account_number ?? null,
+            payment_notes: instructions?.payment_notes ?? null,
+          }}
+        />
+      </div>
       <form
         className="mt-6 grid max-w-lg gap-4 rounded-xl border border-line bg-white p-5"
         onSubmit={async (event) => {

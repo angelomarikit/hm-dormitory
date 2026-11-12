@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { StatCard } from '@/components/admin/StatCard'
 import { useSite } from '@/contexts/SiteContext'
 import { useBoarderTenant } from '@/hooks/useBoarderTenant'
-import { fetchBillsForTenant, syncLiveBilling } from '@/services/billingService'
+import { PaymentQrCard } from '@/components/payments/PaymentQrCard'
+import { fetchBillsForTenant, fetchBillingSettings, syncLiveBilling, type BillingSettings } from '@/services/billingService'
 import { fetchNotices, fetchNotifications } from '@/services/commsService'
 import { fetchBeds } from '@/services/bedService'
 import { formatPeso } from '@/utils/money'
@@ -16,6 +17,7 @@ export default function BoarderHomePage() {
   const [notices, setNotices] = useState<Notice[]>([])
   const [alerts, setAlerts] = useState<AppNotification[]>([])
   const [bedCode, setBedCode] = useState<string | null>(null)
+  const [instructions, setInstructions] = useState<BillingSettings | null>(null)
 
   useEffect(() => {
     if (!siteId || !tenant) return
@@ -28,6 +30,7 @@ export default function BoarderHomePage() {
     void fetchNotifications()
       .then((items) => setAlerts(items.filter((item) => !item.is_read)))
       .catch(() => setAlerts([]))
+    void fetchBillingSettings(siteId).then(setInstructions).catch(() => setInstructions(null))
     if (tenant.bed_id) {
       void fetchBeds(siteId)
         .then((beds) => setBedCode(beds.find((bed) => bed.id === tenant.bed_id)?.bed_code ?? null))
@@ -60,6 +63,19 @@ export default function BoarderHomePage() {
         <StatCard label="Open bills" value={open.length} />
         <StatCard label="Notices" value={notices.length} />
       </div>
+      {instructions?.payment_qr_url || instructions?.payment_account_number ? (
+        <div className="mt-8">
+          <PaymentQrCard
+            eyebrow="How to pay"
+            instructions={{
+              payment_qr_url: instructions.payment_qr_url,
+              payment_account_name: instructions.payment_account_name,
+              payment_account_number: instructions.payment_account_number,
+              payment_notes: instructions.payment_notes,
+            }}
+          />
+        </div>
+      ) : null}
       <div className="mt-8 flex flex-wrap gap-3 text-sm">
         <Link to="/boarder/bills" className="underline decoration-gold underline-offset-4">My bills</Link>
         <Link to="/boarder/pay" className="underline decoration-gold underline-offset-4">Pay now</Link>

@@ -29,7 +29,9 @@ Run these in the **Supabase SQL Editor**, one file at a time, on the same projec
 
 11. **`migrations/012_fix_notices_rls.sql`** — fix Notices page failing to load (policy recursion)
 
-12. **`migrations/010_reset_hm_dormitory_ops.sql`** — optional production wipe of test boarders/bills/messages (keeps rooms and website copy)
+12. **`migrations/013_payment_qr.sql`** — owner QR / account details shown on Payments and boarder Pay
+
+13. **`migrations/010_reset_hm_dormitory_ops.sql`** — optional production wipe of test boarders/bills/messages (keeps rooms and website copy)
 
 ## After each file
 

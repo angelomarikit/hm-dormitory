@@ -58,7 +58,53 @@ export async function updateRoomRent(siteId: string, roomId: string, monthlyRent
   }
 }
 
-export async function fetchBillingSettings(siteId: string) {
-  const { data } = await supabase.from('billing_settings').select('*').eq('site_id', siteId).maybeSingle()
-  return data as { due_day: number; site_id: string } | null
+export interface BillingSettings {
+  site_id: string
+  due_day: number
+  payment_qr_url: string | null
+  payment_account_name: string | null
+  payment_account_number: string | null
+  payment_notes: string | null
+}
+
+export async function fetchBillingSettings(siteId: string): Promise<BillingSettings | null> {
+  const { data, error } = await supabase.from('billing_settings').select('*').eq('site_id', siteId).maybeSingle()
+  if (error) {
+    if (/schema cache|column|does not exist/i.test(error.message)) {
+      throw new Error('Run supabase/migrations/013_payment_qr.sql in the SQL Editor to save payment QR details.')
+    }
+    throw new Error(error.message)
+  }
+  return data as BillingSettings | null
+}
+
+export async function savePaymentInstructions(
+  siteId: string,
+  input: {
+    payment_qr_url: string | null
+    payment_account_name: string
+    payment_account_number: string
+    payment_notes: string
+  },
+) {
+  const payload = {
+    payment_qr_url: input.payment_qr_url,
+    payment_account_name: input.payment_account_name.trim() || null,
+    payment_account_number: input.payment_account_number.trim() || null,
+    payment_notes: input.payment_notes.trim() || null,
+  }
+  const existing = await supabase.from('billing_settings').select('id').eq('site_id', siteId).maybeSingle()
+  if (existing.data) {
+    const { error } = await supabase.from('billing_settings').update(payload).eq('site_id', siteId)
+    if (error) {
+      throw new Error(
+        /schema cache|column|does not exist/i.test(error.message)
+          ? 'Run supabase/migrations/013_payment_qr.sql in the SQL Editor to save payment QR details.'
+          : 'Unable to save payment details.',
+      )
+    }
+    return
+  }
+  const { error } = await supabase.from('billing_settings').insert({ site_id: siteId, ...payload })
+  if (error) throw new Error('Unable to save payment details.')
 }
