@@ -31,7 +31,9 @@ Run these in the **Supabase SQL Editor**, one file at a time, on the same projec
 
 12. **`migrations/013_payment_qr.sql`** — owner QR / account details shown on Payments and boarder Pay
 
-13. **`migrations/010_reset_hm_dormitory_ops.sql`** — optional production wipe of test boarders/bills/messages (keeps rooms and website copy)
+13. **`migrations/014_registration_bed.sql`** — applicants choose room and bed; admin review shows that allocation
+
+14. **`migrations/010_reset_hm_dormitory_ops.sql`** — optional production wipe of test boarders/bills/messages (keeps rooms and website copy)
 
 ## After each file
 

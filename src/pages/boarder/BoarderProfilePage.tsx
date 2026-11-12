@@ -1,4 +1,5 @@
 import { useBoarderTenant } from '@/hooks/useBoarderTenant'
+import { toDisplayUsername } from '@/lib/authIdentity'
 import { formatDate } from '@/utils/format'
 
 export default function BoarderProfilePage() {
@@ -13,8 +14,8 @@ export default function BoarderProfilePage() {
           <dd className="font-medium">{tenant?.full_name ?? '—'}</dd>
         </div>
         <div>
-          <dt className="text-muted">Email</dt>
-          <dd>{tenant?.email ?? '—'}</dd>
+          <dt className="text-muted">Username</dt>
+          <dd>{toDisplayUsername(tenant?.email) || '—'}</dd>
         </div>
         <div>
           <dt className="text-muted">Mobile</dt>

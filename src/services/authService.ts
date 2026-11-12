@@ -1,9 +1,10 @@
+import { toAuthEmail } from '@/lib/authIdentity'
 import { supabase } from '@/lib/supabase'
 import type { SiteMember, SiteRole } from '@/types/database'
 import type { BoarderProfile } from '@/types/ops'
 
 export async function signInWithPassword(email: string, password: string) {
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  const { error } = await supabase.auth.signInWithPassword({ email: toAuthEmail(email), password })
   if (error) {
     throw new Error(error.message)
   }
@@ -11,7 +12,7 @@ export async function signInWithPassword(email: string, password: string) {
 
 export async function signUpWithPassword(email: string, password: string, fullName: string) {
   const { data, error } = await supabase.auth.signUp({
-    email,
+    email: toAuthEmail(email),
     password,
     options: { data: { full_name: fullName } },
   })
@@ -22,7 +23,7 @@ export async function signUpWithPassword(email: string, password: string, fullNa
 }
 
 export async function requestPasswordReset(email: string) {
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+  const { error } = await supabase.auth.resetPasswordForEmail(toAuthEmail(email), {
     redirectTo: `${window.location.origin}/login`,
   })
   if (error) {

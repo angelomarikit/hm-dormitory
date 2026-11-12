@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import {
   Activity,
   Banknote,
@@ -26,6 +26,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useSite } from '@/contexts/SiteContext'
 import { Button } from '@/components/ui/Button'
 import { KeepAliveOutlet } from '@/components/KeepAliveOutlet'
+import { UnreadBadge } from '@/components/messages/UnreadBadge'
+import { useStaffMessageUnreads } from '@/hooks/useStaffMessageUnreads'
 
 const navItems = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -53,6 +55,7 @@ export function AdminLayout() {
   const { signOut, role, user } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const { total: unreadMessages } = useStaffMessageUnreads()
 
   async function handleSignOut() {
     await signOut()
@@ -75,8 +78,9 @@ export function AdminLayout() {
               ].join(' ')
             }
           >
-            <Icon className="h-4 w-4" />
-            {item.label}
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className="flex-1">{item.label}</span>
+            {item.to === '/admin/messages' ? <UnreadBadge count={unreadMessages} /> : null}
           </NavLink>
         )
       })}
@@ -113,10 +117,22 @@ export function AdminLayout() {
               <p className="text-sm font-medium">{site?.name}</p>
             </div>
           </div>
-          <Button variant="outline" onClick={() => void handleSignOut()}>
-            <LogOut className="h-4 w-4" />
-            Log out
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/admin/messages"
+              className="relative rounded-md border border-line p-2 text-ink hover:bg-paper-2"
+              aria-label={
+                unreadMessages > 0 ? `${unreadMessages} unread boarder messages` : 'Messages'
+              }
+            >
+              <MessageSquare className="h-5 w-5" />
+              <UnreadBadge count={unreadMessages} overlay />
+            </Link>
+            <Button variant="outline" onClick={() => void handleSignOut()}>
+              <LogOut className="h-4 w-4" />
+              Log out
+            </Button>
+          </div>
         </header>
 
         {open ? (

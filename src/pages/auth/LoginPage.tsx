@@ -44,7 +44,13 @@ export default function LoginPage() {
         <h1 className="mt-4 font-display text-3xl">{site?.name ?? 'HM Dormitory'}</h1>
         <p className="mt-1 text-sm text-muted">Boarders, caretakers, and administrators sign in here.</p>
         <div className="mt-6 grid gap-4">
-          <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <Input
+            label="Username or email"
+            autoComplete="username"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
           <Input
             label="Password"
             type="password"

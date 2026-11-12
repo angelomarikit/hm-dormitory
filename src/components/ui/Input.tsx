@@ -4,9 +4,10 @@ import { cn } from '@/utils/cn'
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
   error?: string
+  hint?: string
 }
 
-export function Input({ label, error, id, className, ...props }: InputProps) {
+export function Input({ label, error, hint, id, className, ...props }: InputProps) {
   const inputId = id ?? props.name ?? label.replace(/\s+/g, '-').toLowerCase()
 
   return (
@@ -21,6 +22,7 @@ export function Input({ label, error, id, className, ...props }: InputProps) {
         )}
         {...props}
       />
+      {hint && !error ? <span className="text-sm text-muted">{hint}</span> : null}
       {error ? <span className="text-sm text-red-700">{error}</span> : null}
     </label>
   )

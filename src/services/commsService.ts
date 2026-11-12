@@ -98,6 +98,54 @@ export async function sendMessage(input: {
   return throwIfError(data as Message | null, error, 'Unable to send message.')
 }
 
+export const STAFF_UNREAD_EVENT = 'hm-staff-unread'
+
+export function notifyStaffUnreadRefresh() {
+  window.dispatchEvent(new Event(STAFF_UNREAD_EVENT))
+}
+
+export async function fetchUnreadBoarderCounts(siteId: string, userId: string) {
+  const [{ data: messages, error: messageError }, { data: reads }] = await Promise.all([
+    supabase
+      .from('messages')
+      .select('conversation_id, sender_id, created_at')
+      .eq('site_id', siteId)
+      .neq('sender_id', userId),
+    supabase
+      .from('message_read_states')
+      .select('conversation_id, last_read_at')
+      .eq('user_id', userId),
+  ])
+  if (messageError) throw messageError
+
+  const readAt = new Map(
+    (reads ?? []).map((row) => [row.conversation_id as string, row.last_read_at as string]),
+  )
+  const byConversation: Record<string, number> = {}
+  for (const message of messages ?? []) {
+    const lastRead = readAt.get(message.conversation_id)
+    const unread = !lastRead || new Date(message.created_at).getTime() > new Date(lastRead).getTime()
+    if (unread) {
+      byConversation[message.conversation_id] = (byConversation[message.conversation_id] ?? 0) + 1
+    }
+  }
+  const total = Object.values(byConversation).reduce((sum, count) => sum + count, 0)
+  return { total, byConversation }
+}
+
+export async function markConversationRead(conversationId: string, userId: string) {
+  const { error } = await supabase.from('message_read_states').upsert(
+    {
+      conversation_id: conversationId,
+      user_id: userId,
+      last_read_at: new Date().toISOString(),
+    },
+    { onConflict: 'conversation_id,user_id' },
+  )
+  if (error) return
+  notifyStaffUnreadRefresh()
+}
+
 export async function fetchMaintenance(siteId: string): Promise<MaintenanceRequest[]> {
   const { data, error } = await supabase
     .from('maintenance_requests')

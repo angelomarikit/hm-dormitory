@@ -4,13 +4,11 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { useSite } from '@/contexts/SiteContext'
 import { useToast } from '@/contexts/ToastContext'
 import { fetchBeds } from '@/services/bedService'
 import { fetchAllRooms } from '@/services/roomService'
-import { fetchActiveTenants } from '@/services/tenantService'
 import { approveRegistration, fetchRegistrations, setRegistrationStatus } from '@/services/registrationService'
 import { logActivity } from '@/services/commsService'
 import { supabase } from '@/lib/supabase'
@@ -27,24 +25,19 @@ export default function RegistrationsPage() {
   const [items, setItems] = useState<Registration[]>([])
   const [rooms, setRooms] = useState<RoomWithRelations[]>([])
   const [beds, setBeds] = useState<Bed[]>([])
-  const [occupiedBeds, setOccupiedBeds] = useState<string[]>([])
   const [open, setOpen] = useState<Registration | null>(null)
-  const [roomId, setRoomId] = useState('')
-  const [bedId, setBedId] = useState('')
   const [note, setNote] = useState('')
 
   async function load() {
     if (!siteId) return
-    const [regs, nextRooms, nextBeds, tenants] = await Promise.all([
+    const [regs, nextRooms, nextBeds] = await Promise.all([
       fetchRegistrations(siteId),
       fetchAllRooms(siteId),
       fetchBeds(siteId),
-      fetchActiveTenants(siteId),
     ])
     setItems(regs)
     setRooms(nextRooms.filter((room) => room.is_active))
     setBeds(nextBeds)
-    setOccupiedBeds(tenants.map((t) => t.bed_id).filter(Boolean) as string[])
   }
 
   useEffect(() => {
@@ -66,13 +59,19 @@ export default function RegistrationsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId])
 
-  const openBeds = beds.filter((bed) => bed.room_id === roomId && !occupiedBeds.includes(bed.id))
+  function roomNumber(registration: Registration) {
+    return rooms.find((room) => room.id === registration.preferred_room_id)?.room_number ?? '—'
+  }
+
+  function bedCode(registration: Registration) {
+    return beds.find((bed) => bed.id === registration.preferred_bed_id)?.bed_code ?? '—'
+  }
 
   return (
     <div>
       <AdminPageHeader
         title="Registrations"
-        description="Applications from the public form are saved in the database. Every admin on this site sees the same list."
+        description="Room and bed come from the applicant’s form. Approve to confirm that allocation."
       />
       {items.length === 0 ? (
         <div className="mt-6">
@@ -88,7 +87,8 @@ export default function RegistrationsPage() {
             <tr>
               <th className="px-4 py-3">Reference</th>
               <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Email</th>
+              <th className="px-4 py-3">Room</th>
+              <th className="px-4 py-3">Bed</th>
               <th className="px-4 py-3">Submitted</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3" />
@@ -99,7 +99,8 @@ export default function RegistrationsPage() {
               <tr key={item.id} className="border-t border-line/70">
                 <td className="px-4 py-3 font-medium">{item.reference_number}</td>
                 <td className="px-4 py-3">{item.full_name}</td>
-                <td className="px-4 py-3 text-muted">{item.email}</td>
+                <td className="px-4 py-3">{roomNumber(item)}</td>
+                <td className="px-4 py-3">{bedCode(item)}</td>
                 <td className="px-4 py-3 text-muted">{formatDateTime(item.created_at)}</td>
                 <td className="px-4 py-3">
                   <Badge tone={item.status === 'approved' ? 'success' : 'neutral'}>{item.status}</Badge>
@@ -119,49 +120,44 @@ export default function RegistrationsPage() {
       <Modal open={Boolean(open)} title={open?.full_name ?? 'Application'} onClose={() => setOpen(null)}>
         {open ? (
           <div className="grid gap-3 text-sm">
-            <p>{open.email} · {open.mobile}</p>
+            <p>Username {open.email} · {open.mobile}</p>
             <p>{open.home_address}</p>
             <p>
               {open.occupancy_type} {open.school_or_company ? `· ${open.school_or_company}` : ''}
               {open.expected_stay ? ` · ${open.expected_stay}` : ''}
             </p>
-            <Select label="Assign room" value={roomId} onChange={(e) => { setRoomId(e.target.value); setBedId(''); }}>
-              <option value="">Select room</option>
-              {rooms.map((room) => (
-                <option key={room.id} value={room.id}>
-                  {room.room_number}
-                </option>
-              ))}
-            </Select>
-            <Select label="Assign bed" value={bedId} onChange={(e) => setBedId(e.target.value)}>
-              <option value="">Select bed</option>
-              {openBeds.map((bed) => (
-                <option key={bed.id} value={bed.id}>
-                  {bed.bed_code}
-                  {(bed.monthly_rent_centavos ?? 0) > 0 ? ` · ${formatPeso(bed.monthly_rent_centavos ?? 0)}` : ''}
-                </option>
-              ))}
-            </Select>
+            <div className="rounded-xl border border-line bg-paper-2 p-4">
+              <p className="text-xs tracking-[0.16em] text-gold uppercase">Chosen allocation</p>
+              <p className="mt-2 font-display text-2xl">
+                Room {roomNumber(open)} · {bedCode(open)}
+              </p>
+              {(() => {
+                const bed = beds.find((item) => item.id === open.preferred_bed_id)
+                const rent = bed?.monthly_rent_centavos ?? 0
+                return rent ? <p className="mt-1 text-sm text-muted">{formatPeso(rent)} per month</p> : null
+              })()}
+            </div>
             <Textarea label="Notes" value={note} onChange={(e) => setNote(e.target.value)} />
             <div className="flex flex-wrap gap-2">
               <Button
+                disabled={!open.preferred_room_id || !open.preferred_bed_id}
                 onClick={async () => {
-                  if (!siteId || !roomId || !bedId) return
-                  const bed = beds.find((item) => item.id === bedId)
-                  const room = rooms.find((item) => item.id === roomId)
+                  if (!siteId || !open.preferred_room_id || !open.preferred_bed_id) return
+                  const bed = beds.find((item) => item.id === open.preferred_bed_id)
+                  const room = rooms.find((item) => item.id === open.preferred_room_id)
                   try {
                     await approveRegistration({
                       siteId,
                       registration: open,
-                      roomId,
-                      bedId,
+                      roomId: open.preferred_room_id,
+                      bedId: open.preferred_bed_id,
                       rentCentavos:
                         bed?.monthly_rent_centavos ||
-                        (room as { monthly_rent_centavos?: number } | undefined)?.monthly_rent_centavos ||
+                        room?.monthly_rent_centavos ||
                         0,
                     })
                     await logActivity(siteId, 'registration_approved', 'registration', open.id, open.reference_number)
-                    toast.success('Application approved.')
+                    toast.success('Application approved with the chosen room and bed.')
                     setOpen(null)
                     await load()
                   } catch (error) {
@@ -169,7 +165,7 @@ export default function RegistrationsPage() {
                   }
                 }}
               >
-                Approve and assign
+                Approve
               </Button>
               <Button
                 variant="danger"
@@ -184,6 +180,12 @@ export default function RegistrationsPage() {
                 Reject
               </Button>
             </div>
+            {!open.preferred_room_id || !open.preferred_bed_id ? (
+              <p className="text-sm text-muted">
+                This older application has no room and bed on file. Ask the applicant to submit again after running
+                014_registration_bed.sql.
+              </p>
+            ) : null}
           </div>
         ) : null}
       </Modal>

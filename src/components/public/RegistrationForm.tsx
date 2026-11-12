@@ -7,9 +7,10 @@ import { Textarea } from '@/components/ui/Textarea'
 import { useSite } from '@/contexts/SiteContext'
 import { useToast } from '@/contexts/ToastContext'
 import { fetchAllRooms } from '@/services/roomService'
+import { fetchOpenBeds, type OpenBed } from '@/services/bedService'
 import { submitRegistration } from '@/services/registrationService'
-import { getAvailableSpaces } from '@/utils/roomAvailability'
 import { toUserMessage } from '@/lib/errors'
+import { isUsernameValid, normalizeUsername } from '@/lib/authIdentity'
 import type { RoomWithRelations } from '@/types/database'
 import type { RegistrationInput } from '@/types/ops'
 
@@ -28,6 +29,7 @@ const empty: RegistrationInput = {
   emergency_phone: '',
   preferred_room_type: '',
   preferred_room_id: '',
+  preferred_bed_id: '',
   preferred_move_in: '',
   expected_stay: '',
   special_requests: '',
@@ -44,16 +46,26 @@ export function RegistrationForm({ onClose }: { onClose?: () => void }) {
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState<string | null>(null)
   const [rooms, setRooms] = useState<RoomWithRelations[]>([])
+  const [openBeds, setOpenBeds] = useState<OpenBed[]>([])
 
   useEffect(() => {
     if (!siteId) return
     void fetchAllRooms(siteId).then((list) => setRooms(list.filter((room) => room.is_active)))
+    void fetchOpenBeds(siteId).then(setOpenBeds).catch(() => setOpenBeds([]))
   }, [siteId])
 
-  const openRooms = useMemo(
-    () => rooms.filter((room) => getAvailableSpaces(room.capacity, room.occupied_spaces) > 0),
-    [rooms],
+  const roomsWithOpenBeds = useMemo(() => {
+    const ids = new Set(openBeds.map((bed) => bed.room_id))
+    return rooms.filter((room) => ids.has(room.id))
+  }, [openBeds, rooms])
+
+  const bedsForRoom = useMemo(
+    () => openBeds.filter((bed) => bed.room_id === form.preferred_room_id),
+    [form.preferred_room_id, openBeds],
   )
+
+  const chosenRoom = rooms.find((room) => room.id === form.preferred_room_id)
+  const chosenBed = openBeds.find((bed) => bed.bed_id === form.preferred_bed_id)
 
   function set<K extends keyof RegistrationInput>(key: K, value: RegistrationInput[K]) {
     setForm((current) => ({ ...current, [key]: value }))
@@ -86,7 +98,7 @@ export function RegistrationForm({ onClose }: { onClose?: () => void }) {
         <p className="text-xs tracking-[0.22em] text-gold uppercase">Application received</p>
         <p className="mt-3 text-muted">
           Your reference number is <strong className="text-ink">{done}</strong>. You can sign in after approval
-          using the email and password you entered.
+          using the username and password you entered.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Link
@@ -134,8 +146,21 @@ export function RegistrationForm({ onClose }: { onClose?: () => void }) {
 
       {step === 2 ? (
         <div className="mt-5 grid gap-4">
-          <Input label="Email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
-          <Input label="Password for your future account" type="password" value={form.password} onChange={(e) => set('password', e.target.value)} />
+          <Input
+            label="Username"
+            autoComplete="username"
+            value={form.email}
+            onChange={(e) => set('email', e.target.value)}
+            hint="Letters, numbers, dots, underscores, or hyphens. 3–32 characters."
+          />
+          <Input
+            label="Password"
+            type="password"
+            autoComplete="new-password"
+            value={form.password}
+            onChange={(e) => set('password', e.target.value)}
+            hint="Take note: remember your password. You will use it for your account once approved."
+          />
           <Input label="Mobile number" value={form.mobile} onChange={(e) => set('mobile', e.target.value)} />
           <Input label="Emergency contact name" value={form.emergency_name} onChange={(e) => set('emergency_name', e.target.value)} />
           <Input label="Relationship" value={form.emergency_relationship} onChange={(e) => set('emergency_relationship', e.target.value)} />
@@ -145,16 +170,36 @@ export function RegistrationForm({ onClose }: { onClose?: () => void }) {
 
       {step === 3 ? (
         <div className="mt-5 grid gap-4">
-          <Select label="Preferred room type" value={form.preferred_room_type} onChange={(e) => set('preferred_room_type', e.target.value)}>
-            <option value="">No preference</option>
-            <option value="big">Big room (10 people)</option>
-            <option value="small">Small room (4 people)</option>
-          </Select>
-          <Select label="Preferred room" value={form.preferred_room_id} onChange={(e) => set('preferred_room_id', e.target.value)}>
-            <option value="">Any available room</option>
-            {openRooms.map((room) => (
+          <Select
+            label="Room"
+            value={form.preferred_room_id}
+            onChange={(e) => {
+              const roomId = e.target.value
+              const room = rooms.find((item) => item.id === roomId)
+              setForm((current) => ({
+                ...current,
+                preferred_room_id: roomId,
+                preferred_bed_id: '',
+                preferred_room_type: room?.room_type ?? '',
+              }))
+            }}
+          >
+            <option value="">Select a room</option>
+            {roomsWithOpenBeds.map((room) => (
               <option key={room.id} value={room.id}>
-                {room.room_number} · {getAvailableSpaces(room.capacity, room.occupied_spaces)} open
+                Room {room.room_number} · {openBeds.filter((bed) => bed.room_id === room.id).length} beds open
+              </option>
+            ))}
+          </Select>
+          <Select
+            label="Bed"
+            value={form.preferred_bed_id}
+            onChange={(e) => set('preferred_bed_id', e.target.value)}
+          >
+            <option value="">Select a bed</option>
+            {bedsForRoom.map((bed) => (
+              <option key={bed.bed_id} value={bed.bed_id}>
+                {bed.bed_code}
               </option>
             ))}
           </Select>
@@ -165,7 +210,7 @@ export function RegistrationForm({ onClose }: { onClose?: () => void }) {
             <option value="2 semesters">2 semesters</option>
           </Select>
           <Textarea label="Special requests" value={form.special_requests} onChange={(e) => set('special_requests', e.target.value)} />
-          <p className="text-sm text-muted">Preferences are not a confirmed assignment.</p>
+          <p className="text-sm text-muted">This room and bed are held for your application until an administrator reviews it.</p>
         </div>
       ) : null}
 
@@ -181,10 +226,15 @@ export function RegistrationForm({ onClose }: { onClose?: () => void }) {
       {step === 5 ? (
         <div className="mt-5 space-y-3 rounded-xl border border-line bg-paper-2 p-4 text-sm">
           <p><strong>Name:</strong> {form.full_name}</p>
-          <p><strong>Email:</strong> {form.email}</p>
+          <p><strong>Username:</strong> {form.email}</p>
           <p><strong>Mobile:</strong> {form.mobile}</p>
           <p><strong>Move-in:</strong> {form.preferred_move_in || '—'}</p>
           <p><strong>Stay:</strong> {form.expected_stay || '—'}</p>
+          <p>
+            <strong>Room:</strong> {chosenRoom?.room_number || '—'}
+            {' · '}
+            <strong>Bed:</strong> {chosenBed?.bed_code || '—'}
+          </p>
           <label className="mt-4 flex items-start gap-2">
             <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
             <span>I agree to the house rules, terms, and privacy notice, and I confirm this information is true.</span>
@@ -199,7 +249,28 @@ export function RegistrationForm({ onClose }: { onClose?: () => void }) {
           </Button>
         ) : null}
         {step < 5 ? (
-          <Button onClick={() => setStep((s) => s + 1)}>Continue</Button>
+          <Button
+            onClick={() => {
+              if (step === 2) {
+                if (!isUsernameValid(form.email)) {
+                  toast.error('Choose a username with 3–32 letters, numbers, dots, underscores, or hyphens.')
+                  return
+                }
+                if (!form.password || form.password.length < 8) {
+                  toast.error('Password must be at least 8 characters.')
+                  return
+                }
+                set('email', normalizeUsername(form.email))
+              }
+              if (step === 3 && (!form.preferred_room_id || !form.preferred_bed_id)) {
+                toast.error('Choose a room and a bed to continue.')
+                return
+              }
+              setStep((s) => s + 1)
+            }}
+          >
+            Continue
+          </Button>
         ) : (
           <Button disabled={saving} onClick={() => void submit()}>
             {saving ? 'Submitting…' : 'Submit application'}

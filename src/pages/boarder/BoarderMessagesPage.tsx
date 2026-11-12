@@ -12,8 +12,7 @@ export default function BoarderMessagesPage() {
     <div>
       <p className="text-xs tracking-[0.22em] text-gold uppercase">Administration</p>
       <h1 className="mt-2 font-display text-3xl">Messages</h1>
-      <p className="mt-2 text-sm text-muted">Replies from the office appear here instantly and are saved to the database.</p>
-      <div className="mt-6">
+      <div className="mt-4">
         {siteId && user && tenant ? (
           <MessageCenter
             siteId={siteId}

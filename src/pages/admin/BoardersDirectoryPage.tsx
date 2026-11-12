@@ -13,6 +13,7 @@ import { fetchBoarderProfiles, fetchAllTenants } from '@/services/tenantService'
 import { formatDate } from '@/utils/format'
 import { formatPeso } from '@/utils/money'
 import { toUserMessage } from '@/lib/errors'
+import { toDisplayUsername } from '@/lib/authIdentity'
 import type { TenantWithRoom } from '@/types/database'
 import type { Bed, Bill, BoarderProfile } from '@/types/ops'
 
@@ -156,7 +157,7 @@ export default function BoardersDirectoryPage() {
         {selected ? (
           <div className="grid gap-6">
             <div className="grid gap-4 sm:grid-cols-2">
-              <Info label="Email" value={selected.email} />
+              <Info label="Username" value={toDisplayUsername(selected.email)} />
               <Info label="Phone" value={selected.phone} />
               <Info label="Floor" value={selected.rooms?.floors?.name} />
               <Info label="Room" value={selected.rooms?.room_number} />

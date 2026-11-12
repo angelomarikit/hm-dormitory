@@ -26,7 +26,7 @@ export default function RegisterStatusPage() {
       <h1 className="font-display text-3xl">Track your application</h1>
       <div className="mt-6 grid gap-4">
         <Input label="Reference number" value={reference} onChange={(e) => setReference(e.target.value)} />
-        <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <Input label="Username" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} />
         <Button onClick={() => void lookup()}>Check status</Button>
         {missing ? <p className="text-sm text-red-700">No application matched those details.</p> : null}
         {result ? (

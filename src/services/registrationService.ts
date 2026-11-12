@@ -1,3 +1,4 @@
+import { toAuthEmail, normalizeUsername } from '@/lib/authIdentity'
 import { supabase } from '@/lib/supabase'
 import { throwIfError } from '@/lib/errors'
 import { signInWithPassword, signUpWithPassword } from '@/services/authService'
@@ -10,15 +11,16 @@ export async function submitRegistration(
   input: RegistrationInput,
   idFile: File | null,
 ): Promise<Registration> {
-  const email = input.email.trim().toLowerCase()
+  const username = normalizeUsername(input.email)
+  const authEmail = toAuthEmail(username)
   const { data: existingSession } = await supabase.auth.getSession()
   const existingEmail = existingSession.session?.user.email?.toLowerCase()
-  if (existingEmail && existingEmail !== email) {
+  if (existingEmail && existingEmail !== authEmail) {
     await supabase.auth.signOut()
   }
 
   try {
-    await signUpWithPassword(email, input.password, input.full_name.trim())
+    await signUpWithPassword(authEmail, input.password, input.full_name.trim())
   } catch (error) {
     const message = error instanceof Error ? error.message : ''
     if (!/already registered|already exists/i.test(message)) {
@@ -29,10 +31,10 @@ export async function submitRegistration(
   const { data: sessionData } = await supabase.auth.getSession()
   if (!sessionData.session) {
     try {
-      await signInWithPassword(email, input.password)
+      await signInWithPassword(authEmail, input.password)
     } catch {
       throw new Error(
-        'We created your login. Confirm the email if asked, then sign in so the application can be saved to the database.',
+        'We created your login. Sign in with your username and password so the application can be saved to the database.',
       )
     }
   }
@@ -47,13 +49,14 @@ export async function submitRegistration(
       home_address: input.home_address.trim(),
       occupancy_type: input.occupancy_type || '',
       school_or_company: input.school_or_company.trim(),
-      email,
+      email: username,
       mobile: input.mobile.trim(),
       emergency_name: input.emergency_name.trim(),
       emergency_relationship: input.emergency_relationship.trim(),
       emergency_phone: input.emergency_phone.trim(),
       preferred_room_type: input.preferred_room_type || '',
       preferred_room_id: input.preferred_room_id || '',
+      preferred_bed_id: input.preferred_bed_id || '',
       preferred_move_in: input.preferred_move_in || '',
       expected_stay: input.expected_stay.trim(),
       special_requests: input.special_requests.trim(),
@@ -99,7 +102,7 @@ export async function fetchRegistrations(siteId: string): Promise<Registration[]
 export async function lookupRegistration(reference: string, email: string) {
   const { data, error } = await supabase.rpc('lookup_registration_status', {
     p_reference: reference,
-    p_email: email,
+    p_email: normalizeUsername(email),
   })
   if (error) throw new Error('Unable to look up this application.')
   const row = Array.isArray(data) ? data[0] : data

@@ -55,6 +55,7 @@ export interface Registration {
   emergency_phone: string | null
   preferred_room_type: string | null
   preferred_room_id: string | null
+  preferred_bed_id?: string | null
   preferred_move_in: string | null
   expected_stay: string | null
   special_requests: string | null
@@ -78,6 +79,7 @@ export interface RegistrationInput {
   emergency_phone: string
   preferred_room_type: string
   preferred_room_id: string
+  preferred_bed_id: string
   preferred_move_in: string
   expected_stay: string
   special_requests: string

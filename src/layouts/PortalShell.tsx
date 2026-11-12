@@ -1,9 +1,11 @@
 import { useState, type ComponentType } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LogOut, Menu, X } from 'lucide-react'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { LogOut, Menu, MessageSquare, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { UnreadBadge } from '@/components/messages/UnreadBadge'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSite } from '@/contexts/SiteContext'
+import { useStaffMessageUnreads } from '@/hooks/useStaffMessageUnreads'
 
 export interface PortalNavItem {
   to: string
@@ -22,9 +24,12 @@ export function PortalShell({
   homeTo: string
 }) {
   const { site } = useSite()
-  const { signOut, user } = useAuth()
+  const { signOut, user, isCms, isCaretaker } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const { total: unreadMessages } = useStaffMessageUnreads()
+  const messagesItem = items.find((item) => item.to.includes('/messages'))
+  const showStaffMessageBell = Boolean(messagesItem && (isCms || isCaretaker))
 
   async function handleSignOut() {
     await signOut()
@@ -48,8 +53,11 @@ export function PortalShell({
               ].join(' ')
             }
           >
-            <Icon className="h-4 w-4" />
-            {item.label}
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className="flex-1">{item.label}</span>
+            {item.to.includes('/messages') && (isCms || isCaretaker) ? (
+              <UnreadBadge count={unreadMessages} />
+            ) : null}
           </NavLink>
         )
       })}
@@ -83,10 +91,24 @@ export function PortalShell({
               <p className="text-sm font-medium">{site?.name}</p>
             </button>
           </div>
-          <Button variant="outline" onClick={() => void handleSignOut()}>
-            <LogOut className="h-4 w-4" />
-            Log out
-          </Button>
+          <div className="flex items-center gap-2">
+            {showStaffMessageBell && messagesItem ? (
+              <Link
+                to={messagesItem.to}
+                className="relative rounded-md border border-line p-2 text-ink hover:bg-paper-2"
+                aria-label={
+                  unreadMessages > 0 ? `${unreadMessages} unread boarder messages` : 'Messages'
+                }
+              >
+                <MessageSquare className="h-5 w-5" />
+                <UnreadBadge count={unreadMessages} overlay />
+              </Link>
+            ) : null}
+            <Button variant="outline" onClick={() => void handleSignOut()}>
+              <LogOut className="h-4 w-4" />
+              Log out
+            </Button>
+          </div>
         </header>
 
         {open ? (
@@ -120,7 +142,12 @@ export function PortalShell({
                   `flex flex-col items-center gap-1 px-1 py-2 text-[10px] tracking-wide uppercase ${isActive ? 'text-ink' : 'text-muted'}`
                 }
               >
-                <Icon className="h-4 w-4" />
+                <span className="relative">
+                  <Icon className="h-4 w-4" />
+                  {item.to.includes('/messages') && (isCms || isCaretaker) ? (
+                    <UnreadBadge count={unreadMessages} overlay />
+                  ) : null}
+                </span>
                 {item.label}
               </NavLink>
             )
