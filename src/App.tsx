@@ -31,6 +31,7 @@ const FaqsPage = lazy(() => import('@/pages/admin/FaqsPage'))
 const HouseRulesAdminPage = lazy(() => import('@/pages/admin/HouseRulesPage'))
 const SettingsPage = lazy(() => import('@/pages/admin/SettingsPage'))
 const BillingPage = lazy(() => import('@/pages/admin/BillingPage'))
+const UtilitiesPage = lazy(() => import('@/pages/admin/UtilitiesPage'))
 const PaymentsPage = lazy(() => import('@/pages/admin/PaymentsPage'))
 const NoticesPage = lazy(() => import('@/pages/admin/NoticesPage'))
 const MessagesPage = lazy(() => import('@/pages/admin/MessagesPage'))
@@ -74,6 +75,7 @@ export default function App() {
             <Route path="/admin/announcements" element={<AnnouncementsPage />} />
             <Route path="/admin/rooms" element={<AdminRoomsPage />} />
             <Route path="/admin/billing" element={<BillingPage />} />
+            <Route path="/admin/utilities" element={<UtilitiesPage />} />
             <Route path="/admin/payments" element={<PaymentsPage />} />
             <Route path="/admin/notices" element={<NoticesPage />} />
             <Route path="/admin/messages" element={<MessagesPage />} />

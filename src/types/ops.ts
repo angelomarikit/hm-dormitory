@@ -108,6 +108,30 @@ export interface Bill {
   created_at: string
 }
 
+export interface UtilityChargeShare {
+  id: string
+  charge_id: string
+  tenant_id: string
+  bill_id: string | null
+  electricity_centavos: number
+  water_centavos: number
+}
+
+export interface UtilityCharge {
+  id: string
+  site_id: string
+  room_id: string
+  period_start: string
+  electricity_centavos: number
+  water_centavos: number
+  occupant_count: number
+  bill_image_path: string | null
+  notes: string | null
+  applied_at: string | null
+  created_at: string
+  utility_charge_shares?: UtilityChargeShare[]
+}
+
 export interface Payment {
   id: string
   site_id: string

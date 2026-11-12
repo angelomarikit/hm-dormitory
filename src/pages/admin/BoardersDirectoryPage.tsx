@@ -196,7 +196,16 @@ export default function BoardersDirectoryPage() {
                     <tbody>
                       {selectedBills.map((bill) => (
                         <tr key={bill.id} className="border-t border-line">
-                          <td className="px-4 py-2 font-medium">{bill.bill_number}</td>
+                          <td className="px-4 py-2 font-medium">
+                            {bill.bill_number}
+                            {bill.electricity_centavos > 0 || bill.water_centavos > 0 ? (
+                              <span className="mt-1 block text-xs font-normal text-muted">
+                                {bill.electricity_centavos > 0 ? `Electric ${formatPeso(bill.electricity_centavos)}` : ''}
+                                {bill.electricity_centavos > 0 && bill.water_centavos > 0 ? ' · ' : ''}
+                                {bill.water_centavos > 0 ? `Water ${formatPeso(bill.water_centavos)}` : ''}
+                              </span>
+                            ) : null}
+                          </td>
                           <td className="px-4 py-2 text-muted">{formatDate(bill.due_on)}</td>
                           <td className="px-4 py-2">{formatPeso(bill.total_centavos)}</td>
                           <td className="px-4 py-2">{formatPeso(bill.paid_centavos)}</td>

@@ -21,6 +21,12 @@ begin
   delete from public.payments where site_id = sid;
   delete from public.bill_items where bill_id in (select id from public.bills where site_id = sid);
   delete from public.bills where site_id = sid;
+  begin
+    execute 'delete from public.utility_charges where site_id = $1' using sid;
+  exception
+    when undefined_table then
+      null;
+  end;
   delete from public.message_read_states
     where conversation_id in (select id from public.conversations where site_id = sid);
   delete from public.messages where site_id = sid;

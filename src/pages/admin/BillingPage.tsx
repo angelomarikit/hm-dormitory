@@ -47,6 +47,8 @@ export default function BillingPage() {
               <th className="px-4 py-3">Boarder</th>
               <th className="px-4 py-3">Period</th>
               <th className="px-4 py-3">Due</th>
+              <th className="px-4 py-3">Electric</th>
+              <th className="px-4 py-3">Water</th>
               <th className="px-4 py-3">Total</th>
               <th className="px-4 py-3">Paid</th>
               <th className="px-4 py-3">Status</th>
@@ -61,6 +63,8 @@ export default function BillingPage() {
                   {formatDate(bill.period_start)} – {formatDate(bill.period_end)}
                 </td>
                 <td className="px-4 py-3 text-muted">{formatDate(bill.due_on)}</td>
+                <td className="px-4 py-3">{formatPeso(bill.electricity_centavos)}</td>
+                <td className="px-4 py-3">{formatPeso(bill.water_centavos)}</td>
                 <td className="px-4 py-3">{formatPeso(bill.total_centavos)}</td>
                 <td className="px-4 py-3">{formatPeso(bill.paid_centavos)}</td>
                 <td className="px-4 py-3">

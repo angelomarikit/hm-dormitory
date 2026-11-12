@@ -46,7 +46,14 @@ export default function BoarderBillsPage() {
             ) : (
               bills.map((bill) => (
                 <tr key={bill.id} className="border-t border-line/70">
-                  <td className="px-4 py-3 font-medium">{bill.bill_number}</td>
+                  <td className="px-4 py-3 font-medium">
+                    {bill.bill_number}
+                    <div className="mt-1 space-y-0.5 text-xs font-normal text-muted">
+                      {bill.rent_centavos > 0 ? <p>Bed rent {formatPeso(bill.rent_centavos)}</p> : null}
+                      {bill.electricity_centavos > 0 ? <p>Electric {formatPeso(bill.electricity_centavos)}</p> : null}
+                      {bill.water_centavos > 0 ? <p>Water {formatPeso(bill.water_centavos)}</p> : null}
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-muted">
                     {formatDate(bill.period_start)} – {formatDate(bill.period_end)}
                   </td>
