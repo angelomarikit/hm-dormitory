@@ -37,7 +37,9 @@ Run these in the **Supabase SQL Editor**, one file at a time, on the same projec
 
 15. **`migrations/016_utility_month_generate.sql`** — month dropdown, Generate to boarder bills, per-person shares, delete
 
-16. **`migrations/010_reset_hm_dormitory_ops.sql`** — optional production wipe of test boarders/bills/messages (keeps rooms and website copy)
+16. **`migrations/017_utility_readings.sql`** — previous and existing meter readings under electric and water
+
+17. **`migrations/010_reset_hm_dormitory_ops.sql`** — optional production wipe of test boarders/bills/messages (keeps rooms and website copy)
 
 ## After each file
 

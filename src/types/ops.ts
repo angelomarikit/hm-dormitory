@@ -128,6 +128,10 @@ export interface UtilityCharge {
   bill_image_path: string | null
   notes: string | null
   applied_at: string | null
+  electricity_previous_reading?: number | null
+  electricity_current_reading?: number | null
+  water_previous_reading?: number | null
+  water_current_reading?: number | null
   created_at: string
   utility_charge_shares?: UtilityChargeShare[]
 }

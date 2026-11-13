@@ -17,10 +17,12 @@ import { fetchAllRooms } from '@/services/roomService'
 import { fetchActiveTenants } from '@/services/tenantService'
 import {
   deleteUtilityCharge,
+  fetchPreviousRoomReadings,
   fetchUtilityCharges,
   generateMonthUtilities,
   monthStartISO,
   periodKey,
+  readingLabel,
   saveRoomUtilities,
   splitUtilityShares,
   utilityMonthOptions,
@@ -46,7 +48,11 @@ export default function UtilitiesPage() {
   const [charges, setCharges] = useState<UtilityCharge[]>([])
   const [open, setOpen] = useState<RoomWithRelations | null>(null)
   const [electric, setElectric] = useState('')
+  const [electricPrevious, setElectricPrevious] = useState('')
+  const [electricCurrent, setElectricCurrent] = useState('')
   const [water, setWater] = useState('')
+  const [waterPrevious, setWaterPrevious] = useState('')
+  const [waterCurrent, setWaterCurrent] = useState('')
   const [notes, setNotes] = useState('')
   const [billFile, setBillFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -101,7 +107,11 @@ export default function UtilitiesPage() {
 
   function resetForm() {
     setElectric('')
+    setElectricPrevious('')
+    setElectricCurrent('')
     setWater('')
+    setWaterPrevious('')
+    setWaterCurrent('')
     setNotes('')
     setBillFile(null)
     if (preview) URL.revokeObjectURL(preview)
@@ -112,11 +122,27 @@ export default function UtilitiesPage() {
     const charge = roomCharge(room.id)
     setOpen(room)
     setElectric(charge ? String(charge.electricity_centavos / 100) : '')
+    setElectricPrevious(readingLabel(charge?.electricity_previous_reading))
+    setElectricCurrent(readingLabel(charge?.electricity_current_reading))
     setWater(charge ? String(charge.water_centavos / 100) : '')
+    setWaterPrevious(readingLabel(charge?.water_previous_reading))
+    setWaterCurrent(readingLabel(charge?.water_current_reading))
     setNotes(charge?.notes ?? '')
     setBillFile(null)
     if (preview) URL.revokeObjectURL(preview)
     setPreview(null)
+    if (!siteId) return
+    if (charge?.electricity_previous_reading != null || charge?.water_previous_reading != null) return
+    void fetchPreviousRoomReadings(siteId, room.id, month)
+      .then((previous) => {
+        if (previous.electricity != null && !charge?.electricity_previous_reading) {
+          setElectricPrevious(readingLabel(previous.electricity))
+        }
+        if (previous.water != null && !charge?.water_previous_reading) {
+          setWaterPrevious(readingLabel(previous.water))
+        }
+      })
+      .catch(() => undefined)
   }
 
   async function save() {
@@ -132,6 +158,10 @@ export default function UtilitiesPage() {
         waterPesos: water,
         notes,
         billFile,
+        electricityPrevious: electricPrevious,
+        electricityCurrent: electricCurrent,
+        waterPrevious: waterPrevious,
+        waterCurrent: waterCurrent,
       })
       toast.success('Saved. Click Generate to add this to each boarder’s bill.')
       setOpen(null)
@@ -368,6 +398,24 @@ export default function UtilitiesPage() {
               onChange={(event) => setElectric(event.target.value)}
               placeholder="1000"
             />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                label="Previous electric reading"
+                inputMode="decimal"
+                value={electricPrevious}
+                disabled={Boolean(selectedCharge?.applied_at)}
+                onChange={(event) => setElectricPrevious(event.target.value)}
+                placeholder="0"
+              />
+              <Input
+                label="Existing electric reading"
+                inputMode="decimal"
+                value={electricCurrent}
+                disabled={Boolean(selectedCharge?.applied_at)}
+                onChange={(event) => setElectricCurrent(event.target.value)}
+                placeholder="0"
+              />
+            </div>
             <Input
               label="Water (PHP)"
               inputMode="decimal"
@@ -376,11 +424,30 @@ export default function UtilitiesPage() {
               onChange={(event) => setWater(event.target.value)}
               placeholder="300"
             />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                label="Previous water reading"
+                inputMode="decimal"
+                value={waterPrevious}
+                disabled={Boolean(selectedCharge?.applied_at)}
+                onChange={(event) => setWaterPrevious(event.target.value)}
+                placeholder="0"
+              />
+              <Input
+                label="Existing water reading"
+                inputMode="decimal"
+                value={waterCurrent}
+                disabled={Boolean(selectedCharge?.applied_at)}
+                onChange={(event) => setWaterCurrent(event.target.value)}
+                placeholder="0"
+              />
+            </div>
             <label className="block space-y-1.5 text-sm">
-              <span className="font-medium">Bill photo</span>
+              <span className="block font-medium">Bill photo</span>
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp,application/pdf"
+                className="block w-full text-sm"
                 disabled={Boolean(selectedCharge?.applied_at)}
                 onChange={(event) => {
                   const file = event.target.files?.[0] ?? null
