@@ -1,25 +1,35 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/Badge'
+import { chargeForPeriod, MeterReadings } from '@/components/billing/MeterReadings'
 import { useSite } from '@/contexts/SiteContext'
 import { useBoarderTenant } from '@/hooks/useBoarderTenant'
 import { fetchBillsForTenant, syncLiveBilling } from '@/services/billingService'
+import { fetchUtilityChargesForRoom } from '@/services/utilityService'
 import { formatPeso } from '@/utils/money'
 import { formatDate } from '@/utils/format'
-import type { Bill } from '@/types/ops'
+import type { Bill, UtilityCharge } from '@/types/ops'
 
 export default function BoarderBillsPage() {
   const { siteId } = useSite()
   const { tenant } = useBoarderTenant()
   const [bills, setBills] = useState<Bill[]>([])
+  const [charges, setCharges] = useState<UtilityCharge[]>([])
 
   useEffect(() => {
     if (!siteId || !tenant) return
     void syncLiveBilling(siteId)
       .catch(() => undefined)
       .then(() => fetchBillsForTenant(siteId, tenant.id))
-      .then(setBills)
-      .catch(() => setBills([]))
+      .then(async (list) => {
+        setBills(list)
+        const roomId = tenant.room_id ?? list.find((bill) => bill.room_id)?.room_id
+        if (roomId) setCharges(await fetchUtilityChargesForRoom(siteId, roomId))
+      })
+      .catch(() => {
+        setBills([])
+        setCharges([])
+      })
   }, [siteId, tenant])
 
   return (
@@ -50,9 +60,12 @@ export default function BoarderBillsPage() {
                     {bill.bill_number}
                     <div className="mt-1 space-y-0.5 text-xs font-normal text-muted">
                       {bill.rent_centavos > 0 ? <p>Bed rent {formatPeso(bill.rent_centavos)}</p> : null}
-                      {bill.electricity_centavos > 0 ? <p>Electric {formatPeso(bill.electricity_centavos)}</p> : null}
-                      {bill.water_centavos > 0 ? <p>Water {formatPeso(bill.water_centavos)}</p> : null}
                     </div>
+                    <MeterReadings
+                      charge={chargeForPeriod(charges, bill.period_start)}
+                      electricityCentavos={bill.electricity_centavos}
+                      waterCentavos={bill.water_centavos}
+                    />
                   </td>
                   <td className="px-4 py-3 text-muted">
                     {formatDate(bill.period_start)} – {formatDate(bill.period_end)}

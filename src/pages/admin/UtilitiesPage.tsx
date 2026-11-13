@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { Trash2, Zap } from 'lucide-react'
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader'
+import { MeterReadings } from '@/components/billing/MeterReadings'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -333,6 +334,13 @@ export default function UtilitiesPage() {
                           {people.length === 0 ? 'No boarders assigned yet.' : 'Click to add electric and water.'}
                         </p>
                       )}
+                      {charge ? (
+                        <MeterReadings
+                          charge={charge}
+                          electricityCentavos={charge.electricity_centavos}
+                          waterCentavos={charge.water_centavos}
+                        />
+                      ) : null}
                       <div className="mt-4 flex flex-wrap gap-2">
                         <Button variant="outline" onClick={() => openRoom(room)}>
                           {charge?.applied_at ? 'View' : charge ? 'Edit' : 'Add meters'}

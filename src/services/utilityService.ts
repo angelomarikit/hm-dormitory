@@ -63,6 +63,33 @@ export function readingLabel(value: number | null | undefined) {
   return String(value)
 }
 
+export function formatMeterReading(value: number | null | undefined) {
+  if (value == null || Number.isNaN(Number(value))) return '—'
+  return Number(value).toLocaleString('en-PH', { maximumFractionDigits: 2 })
+}
+
+export function formatMeterRange(
+  previous: number | null | undefined,
+  current: number | null | undefined,
+) {
+  if (previous == null && current == null) return null
+  return `${formatMeterReading(previous)} → ${formatMeterReading(current)}`
+}
+
+export async function fetchUtilityChargesForRoom(siteId: string, roomId: string): Promise<UtilityCharge[]> {
+  const { data, error } = await supabase
+    .from('utility_charges')
+    .select('*')
+    .eq('site_id', siteId)
+    .eq('room_id', roomId)
+    .order('period_start', { ascending: false })
+  if (error) {
+    if (/schema cache|does not exist/i.test(error.message)) return []
+    throw new Error(sqlSetupError(error.message))
+  }
+  return (data as UtilityCharge[] | null) ?? []
+}
+
 export async function fetchPreviousRoomReadings(
   siteId: string,
   roomId: string,

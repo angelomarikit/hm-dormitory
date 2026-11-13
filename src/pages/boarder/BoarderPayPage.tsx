@@ -6,11 +6,13 @@ import { useSite } from '@/contexts/SiteContext'
 import { useToast } from '@/contexts/ToastContext'
 import { useBoarderTenant } from '@/hooks/useBoarderTenant'
 import { PaymentQrCard } from '@/components/payments/PaymentQrCard'
+import { chargeForPeriod, MeterReadings } from '@/components/billing/MeterReadings'
 import { fetchBillsForTenant, fetchBillingSettings, type BillingSettings } from '@/services/billingService'
+import { fetchUtilityChargesForRoom } from '@/services/utilityService'
 import { submitEwalletPayment } from '@/services/paymentService'
 import { formatPeso, parsePesoInput } from '@/utils/money'
 import { toUserMessage } from '@/lib/errors'
-import type { Bill, PaymentMethod } from '@/types/ops'
+import type { Bill, PaymentMethod, UtilityCharge } from '@/types/ops'
 
 export default function BoarderPayPage() {
   const { siteId } = useSite()
@@ -24,6 +26,7 @@ export default function BoarderPayPage() {
   const [file, setFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
   const [instructions, setInstructions] = useState<BillingSettings | null>(null)
+  const [charges, setCharges] = useState<UtilityCharge[]>([])
 
   useEffect(() => {
     if (!siteId) return
@@ -39,6 +42,11 @@ export default function BoarderPayPage() {
         setBillId((current) => current || open[0]?.id || '')
       })
       .catch(() => setBills([]))
+    if (tenant.room_id) {
+      void fetchUtilityChargesForRoom(siteId, tenant.room_id)
+        .then(setCharges)
+        .catch(() => setCharges([]))
+    }
   }, [siteId, tenant])
 
   const selected = bills.find((bill) => bill.id === billId)
@@ -95,6 +103,13 @@ export default function BoarderPayPage() {
             </option>
           ))}
         </Select>
+        {selected ? (
+          <MeterReadings
+            charge={chargeForPeriod(charges, selected.period_start)}
+            electricityCentavos={selected.electricity_centavos}
+            waterCentavos={selected.water_centavos}
+          />
+        ) : null}
         <Select label="Method" value={method} onChange={(e) => setMethod(e.target.value as Exclude<PaymentMethod, 'cash'>)}>
           <option value="gcash">GCash</option>
           <option value="maya">Maya</option>
